@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useReviewStore } from '@/stores/review';
 import { useCardStore } from '@/stores/card';
@@ -10,7 +10,7 @@ const reviewStore = useReviewStore();
 const cardStore = useCardStore();
 
 const deckId = computed(() => route.params.deckId as string | undefined);
-const isFlipped = ref(false);
+const showAnswer = ref(false);
 
 const currentCard = computed(() => reviewStore.currentCard);
 const progress = computed(() => reviewStore.progress);
@@ -23,13 +23,29 @@ const renderedBack = computed(() =>
   currentCard.value ? cardStore.renderMarkdown(currentCard.value.back) : ''
 );
 
-function flipCard() {
-  isFlipped.value = !isFlipped.value;
+function showAnswerCard() {
+  showAnswer.value = true;
 }
 
-async function answer(quality: 'again' | 'hard' | 'good' | 'easy') {
-  await reviewStore.answerCard(quality);
-  isFlipped.value = false;
+async function markRemembered() {
+  await reviewStore.answerCard('good');
+  showAnswer.value = false;
+  loadNextCard();
+}
+
+async function markForgot() {
+  await reviewStore.answerCard('again');
+  showAnswer.value = false;
+  loadNextCard();
+}
+
+function loadNextCard() {
+  if (reviewStore.isComplete) {
+    return;
+  }
+  if (!reviewStore.currentCard) {
+    reviewStore.startReview(deckId.value);
+  }
 }
 
 function endReview() {
@@ -41,11 +57,34 @@ function endReview() {
   }
 }
 
-// Start review on mount
-onMounted(async () => {
-  if (!reviewStore.session) {
-    await reviewStore.startReview(deckId.value);
+function handleKeydown(e: KeyboardEvent) {
+  if (isComplete.value || !currentCard.value) return;
+
+  if (!showAnswer.value) {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      showAnswerCard();
+    }
+  } else {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      markRemembered();
+    } else if (e.code === 'KeyF') {
+      e.preventDefault();
+      markForgot();
+    }
   }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown);
+  if (!reviewStore.session) {
+    reviewStore.startReview(deckId.value);
+  }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
@@ -62,7 +101,7 @@ onMounted(async () => {
         <div class="text-sm text-neko-muted dark:text-gray-400">
           {{ progress.current }} / {{ progress.total }}
         </div>
-        <div class="w-8" /> <!-- Spacer -->
+        <div class="w-8" />
       </div>
       <!-- Progress bar -->
       <div class="mt-3 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -87,13 +126,13 @@ onMounted(async () => {
               <div class="text-2xl font-bold text-green-500">
                 {{ reviewStore.session?.correctCount || 0 }}
               </div>
-              <div class="text-sm text-neko-muted dark:text-gray-400">Correct</div>
+              <div class="text-sm text-neko-muted dark:text-gray-400">Remembered</div>
             </div>
             <div>
               <div class="text-2xl font-bold text-red-500">
                 {{ reviewStore.session?.incorrectCount || 0 }}
               </div>
-              <div class="text-sm text-neko-muted dark:text-gray-400">Needs Work</div>
+              <div class="text-sm text-neko-muted dark:text-gray-400">Forgot</div>
             </div>
           </div>
         </div>
@@ -103,7 +142,7 @@ onMounted(async () => {
           </button>
           <button
             v-if="reviewStore.session?.incorrectCount && reviewStore.session.incorrectCount > 0"
-            @click="reviewStore.startReview(deckId); isFlipped = false"
+            @click="reviewStore.startReview(deckId); showAnswer = false"
             class="btn btn-secondary dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
           >
             Review Again
@@ -127,147 +166,86 @@ onMounted(async () => {
     </div>
 
     <!-- Card Review -->
-    <div v-else class="flex-1 flex flex-col p-4">
-      <!-- Card -->
-      <div class="flex-1 flex items-center justify-center">
-        <div
-          class="w-full max-w-2xl flip-container cursor-pointer"
-          @click="flipCard"
-        >
-          <div
-            class="flip-card bg-neko-card rounded-2xl shadow-lg overflow-hidden dark:bg-gray-800"
-            :class="{ flipped: isFlipped }"
-            style="min-height: 400px;"
-          >
-            <div class="flip-inner">
-              <!-- Front -->
-              <div class="flip-face flip-front-face p-8 flex flex-col">
-                <div class="text-xs font-medium text-neko-muted dark:text-gray-400 mb-4 uppercase tracking-wide">
-                  Question
-                </div>
-                <div
-                  class="flex-1 markdown-content text-lg dark:text-white"
-                  v-html="renderedFront"
-                ></div>
-                <div v-if="!isFlipped" class="mt-auto pt-4 text-center text-sm text-neko-muted dark:text-gray-400">
-                  Tap to reveal answer
-                </div>
-              </div>
-
-              <!-- Back -->
-              <div class="flip-face flip-back-face p-8 flex flex-col">
-                <div class="text-xs font-medium text-neko-muted dark:text-gray-400 mb-4 uppercase tracking-wide">
-                  Answer
-                </div>
-                <div
-                  class="flex-1 markdown-content text-lg back-content dark:text-white"
-                  v-html="renderedBack"
-                ></div>
-              </div>
+    <div v-else class="flex-1 flex flex-col">
+      <!-- Card Content -->
+      <div class="flex-1 p-4 overflow-y-auto">
+        <div class="max-w-2xl mx-auto">
+          <!-- Front -->
+          <div class="bg-neko-card dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-4">
+            <div class="text-xs font-medium text-neko-muted dark:text-gray-400 mb-3 uppercase tracking-wide">
+              Question
             </div>
+            <div
+              class="markdown-content text-lg dark:text-white"
+              v-html="renderedFront"
+            ></div>
+          </div>
+
+          <!-- Back (shown after reveal) -->
+          <div
+            v-if="showAnswer"
+            class="bg-neko-card dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+          >
+            <div class="text-xs font-medium text-neko-muted dark:text-gray-400 mb-3 uppercase tracking-wide">
+              Answer
+            </div>
+            <div
+              class="markdown-content text-lg dark:text-white"
+              v-html="renderedBack"
+            ></div>
           </div>
         </div>
       </div>
 
-      <!-- Answer Buttons -->
-      <div v-if="isFlipped" class="mt-4">
-        <div class="text-center text-xs text-gray-400 dark:text-gray-500 mb-2">
-          How well did you know this?
-        </div>
-        <div class="grid grid-cols-4 gap-2">
-          <button
-            @click="answer('again')"
-            class="btn py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:hover:bg-red-900/70"
-          >
-            <div class="text-xs font-medium">Again</div>
-            <div class="text-[10px] opacity-75">&lt; 1m</div>
-          </button>
-          <button
-            @click="answer('hard')"
-            class="btn py-2 bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:hover:bg-orange-900/70"
-          >
-            <div class="text-xs font-medium">Hard</div>
-            <div class="text-[10px] opacity-75">1d</div>
-          </button>
-          <button
-            @click="answer('good')"
-            class="btn py-2 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:hover:bg-green-900/70"
-          >
-            <div class="text-xs font-medium">Good</div>
-            <div class="text-[10px] opacity-75">3d</div>
-          </button>
-          <button
-            @click="answer('easy')"
-            class="btn py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-900/70"
-          >
-            <div class="text-xs font-medium">Easy</div>
-            <div class="text-[10px] opacity-75">7d</div>
-          </button>
-        </div>
-      </div>
-
-      <!-- Flip Button (when not flipped) -->
-      <div v-else class="mt-4">
-        <button @click="flipCard" class="btn btn-primary w-full py-2.5 text-base">
-          Show Answer
-        </button>
+      <!-- Shortcuts Hint -->
+      <div class="shortcuts-hint">
+        <template v-if="!showAnswer">
+          Press <kbd>SPACE</kbd> to show answer
+        </template>
+        <template v-else>
+          Press <kbd>SPACE</kbd> to mark remembered, <kbd>F</kbd> to mark forgot
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.flip-container {
-  perspective: 1000px;
+.shortcuts-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.03);
+  border-top: 1px solid #e5e5e5;
+  color: #6b6b6b;
+  font-size: 13px;
 }
 
-.flip-card {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 400px;
+.dark .shortcuts-hint {
+  background: rgba(255, 255, 255, 0.03);
+  border-top-color: #374151;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.flip-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.6s;
-  transform-style: preserve-3d;
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: inherit;
 }
 
-.flip-card.flipped .flip-inner {
-  transform: rotateY(180deg);
-}
-
-.flip-face {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  background: white;
-  color: #1a1a2e;
-}
-
-.dark .flip-face {
-  background: #1f2937;
-  color: #f9fafb;
-}
-
-.flip-front-face {
-  transform: rotateY(0deg);
-  z-index: 2;
-}
-
-.flip-back-face {
-  transform: rotateY(180deg);
-}
-
-/* Counter-rotate the back content so it reads normally */
-.back-content {
-  transform: rotateY(180deg);
+.dark kbd {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 </style>
