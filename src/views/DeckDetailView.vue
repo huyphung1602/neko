@@ -116,18 +116,6 @@ function handleCardSaved() {
   showAddCardModal.value = false;
 }
 
-// Get card interval text
-function getIntervalText(card: typeof cards.value[0]): string {
-  if (card.state === 'new') return 'New';
-  if (!card.nextReviewDate) return 'New';
-  const days = Math.ceil((new Date(card.nextReviewDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  if (days <= 0) return 'Now';
-  if (days === 1) return '1 day';
-  if (days < 30) return `${days} days`;
-  if (days < 365) return `${Math.ceil(days / 30)} months`;
-  return `${Math.ceil(days / 365)} years`;
-}
-
 function toggleActionsMenu(cardId: string) {
   if (showActionsMenu.value === cardId) {
     showActionsMenu.value = null;
@@ -269,17 +257,6 @@ onUnmounted(() => {
             <div v-if="expandedCards.has(card.id)" class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 prose prose-sm dark:prose-invert max-w-none">
               <div v-html="cardStore.renderMarkdown(card.back)"></div>
             </div>
-
-            <!-- Interval indicator -->
-            <div class="flex items-center gap-1.5 mt-2 pt-2 text-xs text-gray-500 dark:text-gray-400">
-              <span class="w-2 h-2 rounded-full" :class="{
-                'bg-green-500': card.state === 'new',
-                'bg-yellow-500': card.state === 'learning',
-                'bg-blue-500': card.state === 'review',
-                'bg-purple-500': card.state === 'mastered'
-              }"></span>
-              {{ getIntervalText(card) }}
-            </div>
           </div>
 
           <!-- Actions menu button -->
@@ -335,7 +312,7 @@ onUnmounted(() => {
           Add to Review
         </button>
         <button
-          @click="deleteCard(showActionsMenu)"
+          @click="deleteCard(showActionsMenu); showActionsMenu = null"
           class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -382,12 +359,6 @@ onUnmounted(() => {
             <div class="mt-6">
               <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">BACK</div>
               <div class="prose dark:prose-invert max-w-none p-4 bg-gray-50 dark:bg-gray-800 rounded-lg" v-html="cardStore.renderMarkdown(viewingCard.back)"></div>
-            </div>
-            <div v-if="viewingCard.tags.length > 0" class="mt-6">
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">TAGS</div>
-              <div class="flex flex-wrap gap-2">
-                <span v-for="tag in viewingCard.tags" :key="tag" class="badge badge-primary">{{ tag }}</span>
-              </div>
             </div>
           </div>
           <div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
