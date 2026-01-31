@@ -241,7 +241,7 @@ onUnmounted(() => {
           class="relative bg-white dark:bg-gray-800 border border-gray-200 h-fit
           dark:border-gray-700 rounded-xl overflow-hidden transition-all hover:shadow-lg"
         >
-          <div class="p-3 cursor-pointer min-h-[100px]" @click="toggleExpand(card.id)">
+          <div class="p-3 cursor-pointer" @click="toggleExpand(card.id)">
             <!-- Front side always visible -->
             <div class="prose prose-sm dark:prose-invert max-w-none" v-html="cardStore.renderMarkdown(card.front)"></div>
 

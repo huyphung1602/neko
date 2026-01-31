@@ -41,7 +41,7 @@
       <div class="flex-1 overflow-y-auto flex flex-col">
         <DeckTreeItem
           v-for="item in deckTree"
-          :key="item.deck.id"
+          :key="item.deck.path"
           :item="item"
           :isSelected="isDeckSelected(item.deck.path)"
         />
@@ -59,12 +59,11 @@
 
     <!-- Bottom Actions -->
     <div class="p-2 border-t border-gray-200 dark:border-gray-700">
-      <button @click="navigateTo('/settings')" class="nav-item">
+      <button @click="changeWorkspace" class="nav-item">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
         </svg>
-        <span>Settings</span>
+        <span>Change Workspace</span>
       </button>
 
       <button @click="toggleDarkMode" class="nav-item">
@@ -99,19 +98,6 @@
                 @keyup.enter="createDeck"
               />
             </div>
-
-            <div>
-              <label class="block text-xs font-medium mb-1 dark:text-gray-300">Parent (optional)</label>
-              <select
-                v-model="selectedParentPath"
-                class="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
-              >
-                <option :value="null">None (root)</option>
-                <option v-for="deck in deckStore.allDecks" :key="deck.id" :value="deck.path">
-                  {{ deck.path }}
-                </option>
-              </select>
-            </div>
           </div>
 
           <div class="flex justify-end gap-2 mt-4">
@@ -136,10 +122,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useCardStore } from '@/stores/card';
 import { useDeckStore } from '@/stores/deck';
+import { useWorkspaceStore } from '@/stores/workspace';
 import CardModal from '@/components/CardModal.vue';
 import DeckTreeItem from '@/components/DeckTreeItem.vue';
 
@@ -147,11 +134,12 @@ const router = useRouter();
 const route = useRoute();
 const cardStore = useCardStore();
 const deckStore = useDeckStore();
+const workspaceStore = useWorkspaceStore();
 
 const dueCount = computed(() => cardStore.getDueCardsCount());
 
 interface DeckTreeNode {
-  deck: { id: string; path: string; name: string; parentPath: string | null; lastModified: number };
+  deck: { path: string; name: string; parentPath: string | null };
   children: DeckTreeNode[];
 }
 
@@ -160,15 +148,15 @@ function buildDeckTree(decks: typeof deckStore.allDecks): DeckTreeNode[] {
   const roots: DeckTreeNode[] = [];
 
   for (const deck of decks) {
-    deckMap.set(deck.id, { deck, children: [] });
+    deckMap.set(deck.path, { deck: deck as any, children: [] });
   }
 
   for (const deck of decks) {
-    const item = deckMap.get(deck.id)!;
+    const item = deckMap.get(deck.path)!;
     if (deck.parentPath) {
       const parentDeck = decks.find(d => d.path === deck.parentPath);
       if (parentDeck) {
-        const parentItem = deckMap.get(parentDeck.id);
+        const parentItem = deckMap.get(parentDeck.path);
         if (parentItem) parentItem.children.push(item);
       }
     } else {
@@ -214,10 +202,16 @@ function toggleDarkMode() {
   isDark.value = html.classList.contains('dark');
 }
 
+async function changeWorkspace() {
+  await workspaceStore.selectWorkspace();
+  if (workspaceStore.workspacePath) {
+    router.go(0);
+  }
+}
+
 const showCardModal = ref(false);
 const showCreateDeckModal = ref(false);
 const newDeckName = ref('');
-const selectedParentPath = ref<string | null>(null);
 
 function startQuickReview() {
   router.push('/review');
@@ -231,20 +225,22 @@ function openCardModal() {
   showCardModal.value = true;
 }
 
-function handleCardSaved() {}
+function handleCardSaved() {
+  router.go(0);
+}
 
 function openCreateDeckModal() {
   newDeckName.value = '';
-  selectedParentPath.value = null;
   showCreateDeckModal.value = true;
 }
 
-function createDeck() {
-  if (!newDeckName.value.trim()) return;
-  deckStore.createDeck(newDeckName.value.trim(), selectedParentPath.value);
+async function createDeck() {
+  if (!newDeckName.value.trim() || !workspaceStore.workspacePath) return;
+
+  await deckStore.createDeck(newDeckName.value.trim());
   newDeckName.value = '';
-  selectedParentPath.value = null;
   showCreateDeckModal.value = false;
+  router.go(0);
 }
 </script>
 

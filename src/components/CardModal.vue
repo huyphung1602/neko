@@ -144,17 +144,14 @@ watch(() => props.modelValue, (isOpen) => {
 async function saveCard() {
   if (!deckPath.value || !front.value.trim()) return;
 
-  const tagList: string[] = [];
-
   if (isEditing.value && props.editCardId) {
     await cardStore.updateCard(props.editCardId, {
       front: front.value,
       back: back.value,
-      tags: tagList,
       deckPath: deckPath.value
     });
   } else {
-    await cardStore.createCard(deckPath.value, front.value, back.value, tagList);
+    await cardStore.createCard(deckPath.value, front.value, back.value);
   }
 
   emit('saved');

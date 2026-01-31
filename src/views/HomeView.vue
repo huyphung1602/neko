@@ -589,4 +589,76 @@ function openDeck(deckPath: string) {
     grid-template-columns: 1fr;
   }
 }
+
+.dark .welcome-title {
+  color: #fff;
+}
+
+.dark .welcome-subtitle {
+  color: #9ca3af;
+}
+
+.dark .stat-card {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.dark .stat-value {
+  color: #fff;
+}
+
+.dark .stat-label {
+  color: #9ca3af;
+}
+
+.dark .action-card {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.dark .action-content h3 {
+  color: #fff;
+}
+
+.dark .action-content p {
+  color: #9ca3af;
+}
+
+.dark .action-arrow {
+  color: #9ca3af;
+}
+
+.dark .section-header h2 {
+  color: #fff;
+}
+
+.dark .deck-card {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.dark .deck-info h3 {
+  color: #fff;
+}
+
+.dark .deck-info p {
+  color: #9ca3af;
+}
+
+.dark .deck-view-btn {
+  background: #374151;
+  color: #fff;
+}
+
+.dark .deck-view-btn:hover {
+  background: #4b5563;
+}
+
+.dark .empty-state h2 {
+  color: #fff;
+}
+
+.dark .empty-state p {
+  color: #9ca3af;
+}
 </style>

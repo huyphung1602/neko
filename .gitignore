@@ -22,3 +22,13 @@ tests_download/
 
 # Ignore local prompt for development
 docs/dev-local/
+
+# npm/yarn logs
+npm-debug.log*
+yarn-error.log
+
+# Build outputs
+dist-electron/
+electron/.vite/build
+.vite
+.cache

@@ -156,6 +156,42 @@
   @apply bg-gray-800;
 }
 
+/* Explicit dark mode text colors for markdown content */
+.dark .markdown-content,
+.dark .markdown-content p,
+.dark .markdown-content h1,
+.dark .markdown-content h2,
+.dark .markdown-content h3,
+.dark .markdown-content h4,
+.dark .markdown-content li {
+  color: #f3f4f6 !important;
+}
+
+.dark .markdown-content strong {
+  color: #fff !important;
+}
+
+.dark .markdown-content a {
+  color: #fb923c !important;
+}
+
+/* Explicit dark mode for prose class used in templates */
+.dark .prose,
+.dark .prose p,
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose li,
+.dark .prose strong {
+  color: #f3f4f6 !important;
+}
+
+.dark .prose a {
+  color: #fb923c !important;
+}
+
+
 /* Flip card animation */
 .flip-container {
   perspective: 1000px;
@@ -207,15 +243,4 @@
 
 .dark ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-500;
-}
-
-/* Mobile touch improvements */
-@media (hover: none) {
-  .btn {
-    @apply py-3;
-  }
-
-  input, textarea {
-    font-size: 16px; /* Prevent iOS zoom on focus */
-  }
 }

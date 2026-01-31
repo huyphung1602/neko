@@ -39,7 +39,7 @@
     <div v-if="hasChildren && isExpanded" class="flex flex-col">
       <DeckTreeItem
         v-for="child in item.children"
-        :key="child.deck.id"
+        :key="child.deck.path"
         :item="child"
         :level="level + 1"
         :isSelected="isDeckSelected()"
@@ -53,7 +53,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 interface DeckTreeItemData {
-  deck: { id: string; path: string; name: string; parentPath: string | null; lastModified: number };
+  deck: { path: string; name: string; parentPath: string | null };
   children: DeckTreeItemData[];
 }
 
@@ -67,16 +67,20 @@ const router = useRouter();
 const expandedIds = ref<Set<string>>(new Set());
 
 const hasChildren = computed(() => props.item.children.length > 0);
-const isExpanded = computed(() => expandedIds.value.has(props.item.deck.id));
+const isExpanded = computed(() => expandedIds.value.has(props.item.deck.path));
 const level = computed(() => props.level || 0);
+
+function isDeckSelected(): boolean {
+  return props.isSelected || false;
+}
 
 function toggleExpand(e: Event) {
   e.stopPropagation();
   if (!hasChildren.value) return;
-  if (expandedIds.value.has(props.item.deck.id)) {
-    expandedIds.value.delete(props.item.deck.id);
+  if (expandedIds.value.has(props.item.deck.path)) {
+    expandedIds.value.delete(props.item.deck.path);
   } else {
-    expandedIds.value.add(props.item.deck.id);
+    expandedIds.value.add(props.item.deck.path);
   }
 }
 
@@ -85,9 +89,5 @@ function selectDeck() {
     ? props.item.deck.path.slice(1)
     : props.item.deck.path;
   router.push(`/decks/${encodeURIComponent(cleanPath)}`);
-}
-
-function isDeckSelected(): boolean {
-  return props.isSelected || false;
 }
 </script>

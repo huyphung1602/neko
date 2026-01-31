@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { useWorkspaceStore } from '@/stores/workspace';
+import { useGitStore } from '@/stores/git';
+import { computed } from 'vue';
 
 const workspaceStore = useWorkspaceStore();
+const gitStore = useGitStore();
+
+const workspacePath = computed(() => workspaceStore.workspacePath || 'Not selected');
 </script>
 
 <template>
@@ -10,13 +15,32 @@ const workspaceStore = useWorkspaceStore();
 
     <!-- Workspace -->
     <div class="card p-6 mb-6 dark:bg-gray-800 dark:border-gray-700">
-      <h2 class="text-lg font-semibold mb-4 dark:text-white">Storage</h2>
+      <h2 class="text-lg font-semibold mb-4 dark:text-white">Workspace</h2>
       <div class="space-y-4">
         <div class="flex items-center justify-between">
           <div>
-            <div class="font-medium dark:text-white">Storage Type</div>
-            <div class="text-sm text-neko-muted dark:text-gray-400">{{ workspaceStore.storageType }}</div>
+            <div class="font-medium dark:text-white">Folder Location</div>
+            <div class="text-sm text-neko-muted dark:text-gray-400 break-all">{{ workspacePath }}</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Git Status -->
+    <div class="card p-6 mb-6 dark:bg-gray-800 dark:border-gray-700">
+      <h2 class="text-lg font-semibold mb-4 dark:text-white">Git Integration</h2>
+      <div class="space-y-4">
+        <div v-if="gitStore.isGitRepo" class="flex items-center justify-between">
+          <div>
+            <div class="font-medium dark:text-white">Status</div>
+            <div class="text-sm text-neko-muted dark:text-gray-400">
+              <span v-if="gitStore.pendingChanges > 0">{{ gitStore.pendingChanges }} pending changes</span>
+              <span v-else class="text-green-500">All changes committed</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-sm text-neko-muted dark:text-gray-400">
+          Git is not initialized. Enable it from the sidebar to track changes.
         </div>
       </div>
     </div>
@@ -29,7 +53,7 @@ const workspaceStore = useWorkspaceStore();
           Neko is a flashcard application inspired by Mochi.cards and Anki.
         </p>
         <p class="text-neko-muted dark:text-gray-400">
-          Your cards are stored locally in IndexedDB. GitHub sync coming soon!
+          Your cards are stored as markdown files in your workspace folder.
         </p>
       </div>
     </div>

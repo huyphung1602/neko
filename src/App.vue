@@ -3,31 +3,61 @@ import { onMounted } from 'vue';
 import { useWorkspaceStore } from '@/stores/workspace';
 import { useDeckStore } from '@/stores/deck';
 import { useCardStore } from '@/stores/card';
+import { useGitStore } from '@/stores/git';
 import Sidebar from '@/components/Sidebar.vue';
 
 const workspaceStore = useWorkspaceStore();
 const deckStore = useDeckStore();
 const cardStore = useCardStore();
+const gitStore = useGitStore();
 
 async function loadData() {
-  console.log('[App] Loading data...');
+  if (!workspaceStore.workspacePath) return;
   await deckStore.loadDecks();
   await cardStore.loadCards();
-  console.log('[App] Loaded', deckStore.allDecks.length, 'decks and', cardStore.allCards.length, 'cards');
+  await gitStore.refreshStatus();
 }
 
 onMounted(async () => {
   await workspaceStore.init();
-  await loadData();
+  if (workspaceStore.workspacePath) {
+    await loadData();
+  }
 });
 </script>
 
 <template>
-  <div class="app-layout">
+  <!-- Loading state -->
+  <div v-if="!workspaceStore.isInitialized" class="h-screen flex items-center justify-center bg-neko-bg dark:bg-gray-900">
+    <div class="text-center">
+      <div class="text-4xl mb-4">🐱</div>
+      <h1 class="text-2xl font-bold mb-2 dark:text-white">Neko</h1>
+      <p class="text-neko-muted dark:text-gray-400">Loading...</p>
+    </div>
+  </div>
+
+  <!-- Workspace Selection -->
+  <div v-else-if="!workspaceStore.workspacePath" class="h-screen flex items-center justify-center bg-neko-bg dark:bg-gray-900">
+    <div class="max-w-md mx-auto p-8">
+      <h1 class="text-2xl font-bold mb-6 dark:text-white">Select Workspace</h1>
+      <p class="text-neko-muted dark:text-gray-400 mb-6">
+        Choose a folder to store your flashcards as markdown files.
+      </p>
+      <button
+        @click="workspaceStore.selectWorkspace()"
+        class="btn btn-primary"
+      >
+        Select Folder
+      </button>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div v-else class="app-layout">
     <Sidebar />
     <div class="sidebar-separator"></div>
     <main class="main-content with-sidebar">
-      <router-view />
+      <router-view @data-changed="loadData" />
     </main>
   </div>
 </template>
@@ -70,21 +100,12 @@ html, body {
 }
 
 .dark .sidebar-separator {
-  background: #374151;
+  background: #111827;
 }
 
 .main-content {
   min-height: 100vh;
   flex: 1;
   margin-left: 240px;
-}
-
-@media (max-width: 768px) {
-  .sidebar-separator {
-    display: none;
-  }
-  .main-content {
-    margin-left: 0;
-  }
 }
 </style>

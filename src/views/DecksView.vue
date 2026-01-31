@@ -12,35 +12,37 @@ const router = useRouter();
 
 const showCreateModal = ref(false);
 const newDeckName = ref('');
-const selectedParentId = ref<string | null>(null);
-const editingDeckId = ref<string | null>(null);
+const selectedParentPath = ref<string | null>(null);
+const editingDeckPath = ref<string | null>(null);
 const editDeckName = ref('');
 
 function createDeck() {
   if (!newDeckName.value.trim()) return;
 
-  deckStore.createDeck(newDeckName.value.trim(), selectedParentId.value);
+  deckStore.createDeck(newDeckName.value.trim(), selectedParentPath.value || undefined);
   newDeckName.value = '';
-  selectedParentId.value = null;
+  selectedParentPath.value = null;
   showCreateModal.value = false;
+  router.go(0);
 }
 
-function startEditDeck(deckId: string, currentName: string, event: Event) {
+function startEditDeck(deckPath: string, currentName: string, event: Event) {
   event.stopPropagation();
-  editingDeckId.value = deckId;
+  editingDeckPath.value = deckPath;
   editDeckName.value = currentName;
 }
 
 function saveDeckName() {
-  if (editingDeckId.value && editDeckName.value.trim()) {
-    deckStore.renameDeck(editingDeckId.value, editDeckName.value.trim());
+  if (editingDeckPath.value && editDeckName.value.trim()) {
+    deckStore.renameDeck(editingDeckPath.value, editDeckName.value.trim());
   }
-  editingDeckId.value = null;
+  editingDeckPath.value = null;
   editDeckName.value = '';
+  router.go(0);
 }
 
 function cancelEdit() {
-  editingDeckId.value = null;
+  editingDeckPath.value = null;
   editDeckName.value = '';
 }
 
@@ -49,10 +51,11 @@ function openDeck(deckPath: string) {
   router.push(`/decks/${encodeURIComponent(cleanPath)}`);
 }
 
-async function deleteDeck(deckId: string, event: Event) {
+async function deleteDeck(deckPath: string, event: Event) {
   event.stopPropagation();
   if (confirm('Are you sure you want to delete this deck and all its cards?')) {
-    await deckStore.deleteDeck(deckId);
+    await deckStore.deleteDeck(deckPath);
+    router.go(0);
   }
 }
 </script>
@@ -85,13 +88,13 @@ async function deleteDeck(deckId: string, event: Event) {
       <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div
           v-for="deck in deckStore.allDecks"
-          :key="deck.id"
+          :key="deck.path"
           class="card p-4 hover:border-primary-300 cursor-pointer transition-colors dark:bg-gray-800 dark:border-gray-700"
           @click="openDeck(deck.path)"
         >
           <div class="flex items-start justify-between mb-2">
             <div class="flex-1">
-              <h3 v-if="editingDeckId !== deck.id" class="font-semibold text-lg dark:text-white">{{ deck.name }}</h3>
+              <h3 v-if="editingDeckPath !== deck.path" class="font-semibold text-lg dark:text-white">{{ deck.name }}</h3>
               <input
                 v-else
                 v-model="editDeckName"
@@ -103,8 +106,8 @@ async function deleteDeck(deckId: string, event: Event) {
             </div>
             <div class="flex items-center gap-1">
               <button
-                v-if="editingDeckId !== deck.id"
-                @click="startEditDeck(deck.id, deck.name, $event)"
+                v-if="editingDeckPath !== deck.path"
+                @click="startEditDeck(deck.path, deck.name, $event)"
                 class="text-neko-muted dark:text-gray-400 hover:text-primary-500 p-1"
                 title="Edit name"
               >
@@ -113,7 +116,7 @@ async function deleteDeck(deckId: string, event: Event) {
                 </svg>
               </button>
               <button
-                v-if="editingDeckId === deck.id"
+                v-if="editingDeckPath === deck.path"
                 @click="saveDeckName"
                 class="text-green-500 hover:text-green-600 p-1"
                 title="Save"
@@ -123,7 +126,7 @@ async function deleteDeck(deckId: string, event: Event) {
                 </svg>
               </button>
               <button
-                v-if="editingDeckId === deck.id"
+                v-if="editingDeckPath === deck.path"
                 @click="cancelEdit"
                 class="text-gray-400 hover:text-gray-500 p-1"
                 title="Cancel"
@@ -133,7 +136,7 @@ async function deleteDeck(deckId: string, event: Event) {
                 </svg>
               </button>
               <button
-                @click.stop="deleteDeck(deck.id, $event)"
+                @click.stop="deleteDeck(deck.path, $event)"
                 class="text-neko-muted dark:text-gray-400 hover:text-red-500 p-1"
                 title="Delete deck"
               >
@@ -185,9 +188,9 @@ async function deleteDeck(deckId: string, event: Event) {
 
           <div>
             <label class="block text-sm font-medium mb-1 dark:text-gray-300">Parent Deck (optional)</label>
-            <select v-model="selectedParentId" class="input dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            <select v-model="selectedParentPath" class="input dark:bg-gray-700 dark:border-gray-600 dark:text-white">
               <option :value="null">No parent (root deck)</option>
-              <option v-for="deck in deckStore.allDecks" :key="deck.id" :value="deck.id">
+              <option v-for="deck in deckStore.allDecks" :key="deck.path" :value="deck.path">
                 {{ deck.path }}
               </option>
             </select>

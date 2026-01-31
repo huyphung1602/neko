@@ -15,7 +15,6 @@ const isEditing = computed(() => !!cardId.value);
 const deckId = ref('');
 const front = ref('');
 const back = ref('');
-const tags = ref('');
 const isFrontPreview = ref(false);
 const isBackPreview = ref(false);
 
@@ -40,7 +39,6 @@ onMounted(() => {
       deckId.value = card.deckPath;
       front.value = card.front;
       back.value = card.back;
-      tags.value = card.tags.join(', ');
     }
   }
 });
@@ -48,19 +46,14 @@ onMounted(() => {
 async function saveCard() {
   if (!deckId.value || !front.value.trim()) return;
 
-  const tagList = tags.value
-    .split(',')
-    .map(t => t.trim())
-    .filter(Boolean);
-
   if (isEditing.value && cardId.value) {
     await cardStore.updateCard(cardId.value, {
       front: front.value,
       back: back.value,
-      tags: tagList
+      deckPath: deckId.value
     });
   } else {
-    await cardStore.createCard(deckId.value, front.value, back.value, tagList);
+    await cardStore.createCard(deckId.value, front.value, back.value);
   }
 
   router.back();
@@ -200,17 +193,6 @@ const insertMarkdown = (syntax: string, placeholder = '') => {
               placeholder="Enter the answer..."
             ></textarea>
           </div>
-        </div>
-
-        <!-- Tags -->
-        <div>
-          <label class="block text-sm font-medium mb-1 dark:text-gray-300">Tags (comma separated)</label>
-          <input
-            v-model="tags"
-            type="text"
-            class="input dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-400"
-            placeholder="e.g., japanese, vocabulary, n5"
-          />
         </div>
 
         <!-- Preview Both -->
