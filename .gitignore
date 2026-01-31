@@ -1,0 +1,24 @@
+.DS_Store
+node_modules/
+tests_output/
+tests_download/
+/dist/
+*.log*
+.env
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Unit test coverage
+.coverage
+
+.claude/settings.local.json
+
+# Ignore local prompt for development
+docs/dev-local/
