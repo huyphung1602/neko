@@ -28,6 +28,8 @@ const allCardsInDeck = computed(() => {
 
 const searchQuery = ref('');
 const showAddCardModal = ref(false);
+const showEditCardModal = ref(false);
+const editingCardId = ref<string | null>(null);
 const viewingCard = ref<typeof cards.value[0] | null>(null);
 const expandedCards = ref<Set<string>>(new Set());
 const showActionsMenu = ref<string | null>(null);
@@ -83,7 +85,14 @@ function closeViewCard() {
 
 function editCard(cardId: string) {
   viewingCard.value = null;
-  router.push(`/cards/${cardId}`);
+  editingCardId.value = cardId;
+  showEditCardModal.value = true;
+  showActionsMenu.value = null;
+}
+
+function closeEditCard() {
+  showEditCardModal.value = false;
+  editingCardId.value = null;
 }
 
 async function deleteCard(cardId: string) {
@@ -174,25 +183,25 @@ onUnmounted(() => {
 
 <template>
   <div class="h-full flex flex-col dark:bg-gray-900 dark:text-white" @click="handleClickOutside" @keydown="handleKeydown">
-    <header class="p-6 border-b border-neko-border dark:border-gray-700">
+    <header class="p-4 border-b border-neko-border dark:border-gray-700">
       <div class="flex items-center justify-between gap-4">
         <div>
-          <div class="text-sm text-neko-muted dark:text-gray-400">{{ deck?.path }}</div>
-          <h1 class="text-2xl font-bold dark:text-white">{{ deck?.name }}</h1>
-          <p class="text-neko-muted dark:text-gray-400">{{ cards.length }} cards</p>
+          <div class="text-xs text-neko-muted dark:text-gray-400">{{ deck?.path }}</div>
+          <h1 class="text-lg font-bold dark:text-white">{{ deck?.name }}</h1>
+          <p class="text-xs text-neko-muted dark:text-gray-400">{{ cards.length }} cards</p>
         </div>
 
         <!-- Search + Actions -->
-        <div class="flex items-center gap-3 flex-1 max-w-xl">
+        <div class="flex items-center gap-2 flex-1 max-w-xl">
           <!-- Search -->
           <div class="relative flex-1">
-            <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               v-model="searchQuery"
               type="text"
-              class="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               placeholder="Search cards..."
             />
           </div>
@@ -201,22 +210,22 @@ onUnmounted(() => {
           <button
             @click="cramDeck"
             :disabled="allCardsInDeck.length === 0"
-            class="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
             title="Quick review filtered / searched cards. Does not affect review scheduling"
           >
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             <span>Cram</span>
-            <span class="ml-1 px-2 py-0.5 bg-orange-600 rounded-full text-xs">{{ allCardsInDeck.length }}</span>
+            <span class="ml-1 px-1.5 py-0.5 bg-orange-600 rounded-full text-xs">{{ allCardsInDeck.length }}</span>
           </button>
 
           <!-- Add Card Button -->
           <button
             @click="createNewCard"
-            class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors"
           >
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             <span>Add Card</span>
@@ -241,7 +250,8 @@ onUnmounted(() => {
           v-for="card in filteredCards"
           :key="card.id"
           :data-card-id="card.id"
-          class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all hover:shadow-lg"
+          class="relative bg-white dark:bg-gray-800 border border-gray-200 h-fit
+          dark:border-gray-700 rounded-xl overflow-hidden transition-all hover:shadow-lg"
         >
           <div class="p-3 cursor-pointer min-h-[100px]" @click="toggleExpand(card.id)">
             <!-- Front side always visible -->
@@ -341,6 +351,13 @@ onUnmounted(() => {
       v-model="showAddCardModal"
       :initialDeck="deckPath"
       @saved="handleCardSaved"
+    />
+
+    <!-- Edit Card Modal -->
+    <CardModal
+      v-model="showEditCardModal"
+      :editCardId="editingCardId"
+      @saved="closeEditCard"
     />
 
     <!-- View Card Modal -->

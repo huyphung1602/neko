@@ -1,14 +1,64 @@
+<template>
+  <div class="flex flex-col">
+    <button
+      @click="selectDeck"
+      class="flex items-center gap-1.5 px-2 py-1 border-none bg-none w-full text-left cursor-pointer rounded transition-all duration-150 text-xs"
+      :class="[
+        isSelected
+          ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/30 hover:text-gray-700 dark:hover:text-gray-200'
+      ]"
+      :style="{ paddingLeft: `${8 + level * 12}px` }"
+    >
+      <div class="flex items-center justify-center w-3 flex-shrink-0">
+        <button
+          v-if="hasChildren"
+          @click.stop="toggleExpand"
+          class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+        >
+          <svg
+            class="w-3 h-3 transition-transform duration-150"
+            :class="{ 'rotate-90': isExpanded }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        <span v-else class="w-3" />
+      </div>
+
+      <svg class="w-3.5 h-3.5 flex-shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+      </svg>
+
+      <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ item.deck.name }}</span>
+    </button>
+
+    <div v-if="hasChildren && isExpanded" class="flex flex-col">
+      <DeckTreeItem
+        v-for="child in item.children"
+        :key="child.deck.id"
+        :item="child"
+        :level="level + 1"
+        :isSelected="isDeckSelected()"
+      />
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
-interface DeckTreeItem {
+interface DeckTreeItemData {
   deck: { id: string; path: string; name: string; parentPath: string | null; lastModified: number };
-  children: DeckTreeItem[];
+  children: DeckTreeItemData[];
 }
 
 const props = defineProps<{
-  item: DeckTreeItem;
+  item: DeckTreeItemData;
   level?: number;
   isSelected?: boolean;
 }>();
@@ -36,148 +86,8 @@ function selectDeck() {
     : props.item.deck.path;
   router.push(`/decks/${encodeURIComponent(cleanPath)}`);
 }
+
+function isDeckSelected(): boolean {
+  return props.isSelected || false;
+}
 </script>
-
-<template>
-  <div class="deck-tree-item">
-    <button
-      @click="selectDeck"
-      class="deck-button"
-      :class="{ 'selected': isSelected }"
-      :style="{ paddingLeft: `${12 + level * 16}px` }"
-    >
-      <div class="arrow-container">
-        <button
-          v-if="hasChildren"
-          @click="toggleExpand"
-          class="expand-btn"
-        >
-          <svg
-            class="w-4 h-4 transition-transform"
-            :class="{ 'rotate-90': isExpanded }"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-        <span v-else class="w-4" />
-      </div>
-
-      <svg class="deck-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-      </svg>
-
-      <span class="deck-name">{{ item.deck.name }}</span>
-    </button>
-
-    <div v-if="hasChildren && isExpanded" class="nested-children">
-      <DeckTreeItem
-        v-for="child in item.children"
-        :key="child.deck.id"
-        :item="child"
-        :level="level + 1"
-        :is-selected="isSelected"
-      />
-    </div>
-  </div>
-</template>
-
-<style scoped>
-.deck-tree-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.deck-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  padding-right: 8px;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-  border-radius: 6px;
-  color: #6b6b6b;
-  transition: all 0.2s;
-  font-size: 13px;
-}
-
-.deck-button:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: #1a1a2e;
-}
-
-.dark .deck-button {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.dark .deck-button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
-.deck-button.selected {
-  background: rgba(0, 0, 0, 0.05);
-  color: #1a1a2e;
-}
-
-.dark .deck-button.selected {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.arrow-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  flex-shrink: 0;
-}
-
-.expand-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: inherit;
-  border-radius: 4px;
-}
-
-.expand-btn:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.dark .expand-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.deck-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  opacity: 0.6;
-}
-
-.deck-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.nested-children {
-  display: flex;
-  flex-direction: column;
-}
-</style>

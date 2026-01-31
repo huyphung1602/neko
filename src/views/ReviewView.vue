@@ -171,44 +171,44 @@ onMounted(async () => {
 
       <!-- Answer Buttons -->
       <div v-if="isFlipped" class="mt-4">
-        <div class="text-center text-sm text-neko-muted dark:text-gray-400 mb-3">
+        <div class="text-center text-xs text-gray-400 dark:text-gray-500 mb-2">
           How well did you know this?
         </div>
         <div class="grid grid-cols-4 gap-2">
           <button
             @click="answer('again')"
-            class="btn py-3 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:hover:bg-red-900/70"
+            class="btn py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:hover:bg-red-900/70"
           >
-            <div class="text-sm font-medium">Again</div>
-            <div class="text-xs opacity-75">&lt; 1m</div>
+            <div class="text-xs font-medium">Again</div>
+            <div class="text-[10px] opacity-75">&lt; 1m</div>
           </button>
           <button
             @click="answer('hard')"
-            class="btn py-3 bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:hover:bg-orange-900/70"
+            class="btn py-2 bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:hover:bg-orange-900/70"
           >
-            <div class="text-sm font-medium">Hard</div>
-            <div class="text-xs opacity-75">1d</div>
+            <div class="text-xs font-medium">Hard</div>
+            <div class="text-[10px] opacity-75">1d</div>
           </button>
           <button
             @click="answer('good')"
-            class="btn py-3 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:hover:bg-green-900/70"
+            class="btn py-2 bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:hover:bg-green-900/70"
           >
-            <div class="text-sm font-medium">Good</div>
-            <div class="text-xs opacity-75">3d</div>
+            <div class="text-xs font-medium">Good</div>
+            <div class="text-[10px] opacity-75">3d</div>
           </button>
           <button
             @click="answer('easy')"
-            class="btn py-3 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-900/70"
+            class="btn py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-900/70"
           >
-            <div class="text-sm font-medium">Easy</div>
-            <div class="text-xs opacity-75">7d</div>
+            <div class="text-xs font-medium">Easy</div>
+            <div class="text-[10px] opacity-75">7d</div>
           </button>
         </div>
       </div>
 
       <!-- Flip Button (when not flipped) -->
       <div v-else class="mt-4">
-        <button @click="flipCard" class="btn btn-primary w-full py-4 text-lg">
+        <button @click="flipCard" class="btn btn-primary w-full py-2.5 text-base">
           Show Answer
         </button>
       </div>

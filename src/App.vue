@@ -61,7 +61,7 @@ html, body {
 
 .sidebar-separator {
   position: fixed;
-  left: 280px;
+  left: 240px;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -76,7 +76,7 @@ html, body {
 .main-content {
   min-height: 100vh;
   flex: 1;
-  margin-left: 280px;
+  margin-left: 240px;
 }
 
 @media (max-width: 768px) {

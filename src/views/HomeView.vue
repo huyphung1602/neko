@@ -477,12 +477,12 @@ function openDeck(deckPath: string) {
 }
 
 .deck-review-btn {
-  padding: 8px 16px;
+  padding: 6px 12px;
   background: #ed751c;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   color: #fff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -500,12 +500,12 @@ function openDeck(deckPath: string) {
 }
 
 .deck-view-btn {
-  padding: 8px 16px;
+  padding: 6px 12px;
   background: #f5f5f5;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   color: #1a1a2e;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -541,13 +541,13 @@ function openDeck(deckPath: string) {
 .btn-primary {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
+  gap: 6px;
+  padding: 8px 16px;
   background: #ed751c;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
