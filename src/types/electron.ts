@@ -46,6 +46,8 @@ declare global {
       }) => Promise<boolean>;
       deleteCard: (filePath: string) => Promise<boolean>;
       getCardFilesInDeck: (deckPath: string) => Promise<string[]>;
+      readCardMetadata: () => Promise<Record<string, { reviewCount: number; lastReviewDate: string }>>;
+      updateCardMetadata: (data: { cardId: string; reviewCount: number }) => Promise<boolean>;
 
       // Git
       gitStatus: (repoPath: string) => Promise<{

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useDeckStore } from '@/stores/deck';
 import { useCardStore } from '@/stores/card';
 import { useReviewStore } from '@/stores/review';
+import { useMetadataStore } from '@/stores/metadata';
 import CardModal from '@/components/CardModal.vue';
 import CardDisplay from '@/components/CardDisplay.vue';
 
@@ -12,6 +13,7 @@ const router = useRouter();
 const deckStore = useDeckStore();
 const cardStore = useCardStore();
 const reviewStore = useReviewStore();
+const metadataStore = useMetadataStore();
 
 const deckPath = computed(() => {
   const id = route.params.id as string;
@@ -52,6 +54,11 @@ const filteredCards = computed(() => {
 
   return result;
 });
+
+// Get review count for a card from metadata store
+function getReviewCount(cardId: string): number {
+  return metadataStore.getReviewCount(cardId);
+}
 
 async function cramDeck() {
   const cardsToCram = allCardsInDeck.value;
@@ -168,9 +175,11 @@ function handleResize() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('resize', handleResize);
   window.addEventListener('scroll', handleResize, true);
+  // Ensure metadata is loaded
+  await metadataStore.loadMetadata();
 });
 
 onUnmounted(() => {
@@ -248,7 +257,7 @@ onUnmounted(() => {
           v-for="card in filteredCards"
           :key="card.id"
           :data-card-id="card.id"
-          class="relative bg-white dark:bg-gray-800 border border-gray-200
+          class="h-fit relative bg-white dark:bg-gray-800 border border-gray-200
           dark:border-gray-700 rounded-xl overflow-hidden transition-all hover:shadow-lg"
         >
           <CardDisplay
@@ -403,19 +412,13 @@ onUnmounted(() => {
               <span class="font-medium">{{ viewingCard.deckPath }}</span>
             </div>
 
-            <!-- Review count and interval -->
+            <!-- Review count -->
             <div class="flex items-center gap-4 text-sm">
               <div class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span>{{ viewingCard.reviewCount || 0 }} Reviews</span>
-              </div>
-              <div v-if="viewingCard.interval" class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ viewingCard.interval }} day{{ viewingCard.interval > 1 ? 's' : '' }}</span>
+                <span>{{ getReviewCount(viewingCard.id) }} Reviews</span>
               </div>
             </div>
           </div>

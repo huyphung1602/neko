@@ -30,7 +30,8 @@ function startReviewDeck(deckPath: string) {
 }
 
 function openDeck(deckPath: string) {
-  router.push(`/decks/${deckPath}`);
+  const cleanPath = deckPath.startsWith('/') ? deckPath.slice(1) : deckPath;
+  router.push(`/decks/${encodeURIComponent(cleanPath)}`);
 }
 </script>
 

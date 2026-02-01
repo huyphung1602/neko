@@ -208,6 +208,63 @@ ipcMain.handle('get-card-files-in-deck', async (_, deckPath) => {
     .map(f => path.join(deckPath, f));
 });
 
+// ============ Card Metadata Operations ============
+
+ipcMain.handle('read-card-metadata', async () => {
+  const configPath = path.join(app.getPath('userData'), 'config.json');
+  if (!fs.existsSync(configPath)) return {};
+
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  if (!config.workspacePath || !fs.existsSync(config.workspacePath)) return {};
+
+  const metadataPath = path.join(config.workspacePath, '.neko', 'card-metadata.json');
+  if (!fs.existsSync(metadataPath)) return {};
+
+  try {
+    const content = fs.readFileSync(metadataPath, 'utf-8');
+    return JSON.parse(content);
+  } catch (e) {
+    console.error('Error reading card metadata:', e);
+    return {};
+  }
+});
+
+ipcMain.handle('update-card-metadata', async (_, { cardId, reviewCount }) => {
+  const configPath = path.join(app.getPath('userData'), 'config.json');
+  if (!fs.existsSync(configPath)) return false;
+
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  if (!config.workspacePath || !fs.existsSync(config.workspacePath)) return false;
+
+  const nekoDir = path.join(config.workspacePath, '.neko');
+  const metadataPath = path.join(nekoDir, 'card-metadata.json');
+
+  // Create .neko directory if it doesn't exist
+  if (!fs.existsSync(nekoDir)) {
+    fs.mkdirSync(nekoDir, { recursive: true });
+  }
+
+  // Read existing metadata or create new
+  let metadata = {};
+  if (fs.existsSync(metadataPath)) {
+    try {
+      metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+    } catch (e) {
+      metadata = {};
+    }
+  }
+
+  // Update the card's review count
+  metadata[cardId] = {
+    reviewCount: reviewCount,
+    lastReviewDate: new Date().toISOString()
+  };
+
+  // Write back to file
+  fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+  return true;
+});
+
 function parseCardContent(fileName, deckPath, filePath, content) {
   const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   let body = content;

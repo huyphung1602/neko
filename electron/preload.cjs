@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('nekos', {
   saveCard: (data) => ipcRenderer.invoke('save-card', data),
   deleteCard: (filePath) => ipcRenderer.invoke('delete-card', filePath),
   getCardFilesInDeck: (deckPath) => ipcRenderer.invoke('get-card-files-in-deck', deckPath),
+  readCardMetadata: () => ipcRenderer.invoke('read-card-metadata'),
+  updateCardMetadata: (data) => ipcRenderer.invoke('update-card-metadata', data),
 
   // Git
   gitStatus: (repoPath) => ipcRenderer.invoke('git-status', repoPath),

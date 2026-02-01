@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useCardStore, type Card } from './card';
+import { useMetadataStore } from './metadata';
 
 export interface ReviewSession {
   cards: Card[];
@@ -79,6 +80,7 @@ export const useReviewStore = defineStore('review', () => {
     if (!session.value || !currentCard.value) return;
 
     const cardStore = useCardStore();
+    const metadataStore = useMetadataStore();
 
     // Record the answer
     if (quality === 'again' || quality === 'hard') {
@@ -89,6 +91,9 @@ export const useReviewStore = defineStore('review', () => {
 
     // Update the card
     await cardStore.reviewCard(currentCard.value.id, quality);
+
+    // Increment review count in metadata
+    await metadataStore.incrementReviewCount(currentCard.value.id);
 
     // Move to next card
     session.value.currentIndex++;

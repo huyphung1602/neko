@@ -193,7 +193,7 @@ onUnmounted(() => {
 
       <div class="flex-1 flex flex-col max-w-[35rem] mx-auto w-full px-4 pb-4">
         <!-- Card Container -->
-        <div class="h-fit bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-y-auto flex flex-col">
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-y-auto flex flex-col">
           <!-- Card Content -->
           <div class="overflow-y-auto px-8 py-6 flex-1">
             <!-- Front -->

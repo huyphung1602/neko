@@ -4,17 +4,20 @@ import { useWorkspaceStore } from '@/stores/workspace';
 import { useDeckStore } from '@/stores/deck';
 import { useCardStore } from '@/stores/card';
 import { useGitStore } from '@/stores/git';
+import { useMetadataStore } from '@/stores/metadata';
 import Sidebar from '@/components/Sidebar.vue';
 
 const workspaceStore = useWorkspaceStore();
 const deckStore = useDeckStore();
 const cardStore = useCardStore();
 const gitStore = useGitStore();
+const metadataStore = useMetadataStore();
 
 async function loadData() {
   if (!workspaceStore.workspacePath) return;
   await deckStore.loadDecks();
   await cardStore.loadCards();
+  await metadataStore.loadMetadata();
   await gitStore.refreshStatus();
 }
 
