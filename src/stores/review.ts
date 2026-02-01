@@ -24,10 +24,11 @@ export const useReviewStore = defineStore('review', () => {
 
   const progress = computed(() => {
     if (!session.value) return { current: 0, total: 0, percent: 0 };
+    const current = Math.min(session.value.currentIndex + 1, session.value.cards.length);
     return {
-      current: session.value.currentIndex + 1,
+      current,
       total: session.value.cards.length,
-      percent: Math.round(((session.value.currentIndex + 1) / session.value.cards.length) * 100)
+      percent: Math.round((current / session.value.cards.length) * 100)
     };
   });
 

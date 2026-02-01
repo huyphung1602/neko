@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useReviewStore } from '@/stores/review';
 import { useCardStore } from '@/stores/card';
+import { parseHiddenSides } from '@/stores/card';
 
 const route = useRoute();
 const router = useRouter();
@@ -10,32 +11,46 @@ const reviewStore = useReviewStore();
 const cardStore = useCardStore();
 
 const deckId = computed(() => route.params.deckId as string | undefined);
-const showAnswer = ref(false);
+const revealedCount = ref(0);
 
 const currentCard = computed(() => reviewStore.currentCard);
 const progress = computed(() => reviewStore.progress);
 const isComplete = computed(() => reviewStore.isComplete);
 
+const hiddenSides = computed(() =>
+  currentCard.value ? parseHiddenSides(currentCard.value.back) : []
+);
+const hiddenSidesCount = computed(() => hiddenSides.value.length);
+const hasMoreSides = computed(() => revealedCount.value < hiddenSidesCount.value);
+const isAllRevealed = computed(() => revealedCount.value >= hiddenSidesCount.value && hiddenSidesCount.value > 0);
+
 const renderedFront = computed(() =>
   currentCard.value ? cardStore.renderMarkdown(currentCard.value.front) : ''
 );
-const renderedBack = computed(() =>
-  currentCard.value ? cardStore.renderMarkdown(currentCard.value.back) : ''
+
+const revealedSides = computed(() =>
+  hiddenSides.value.slice(0, revealedCount.value)
 );
 
-function showAnswerCard() {
-  showAnswer.value = true;
+const renderedHiddenSides = computed(() =>
+  revealedSides.value.map(side => cardStore.renderMarkdown(side))
+);
+
+function revealNext() {
+  if (hasMoreSides.value) {
+    revealedCount.value++;
+  }
 }
 
 async function markRemembered() {
   await reviewStore.answerCard('good');
-  showAnswer.value = false;
+  revealedCount.value = 0;
   loadNextCard();
 }
 
 async function markForgot() {
   await reviewStore.answerCard('again');
-  showAnswer.value = false;
+  revealedCount.value = 0;
   loadNextCard();
 }
 
@@ -60,18 +75,24 @@ function endReview() {
 function handleKeydown(e: KeyboardEvent) {
   if (isComplete.value || !currentCard.value) return;
 
-  if (!showAnswer.value) {
+  if (e.code === 'Backspace') {
+    endReview();
+    return;
+  }
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+  }
+
+  if (isAllRevealed.value) {
     if (e.code === 'Space') {
-      e.preventDefault();
-      showAnswerCard();
+      markRemembered();
+    } else if (e.code === 'KeyF') {
+      markForgot();
     }
   } else {
     if (e.code === 'Space') {
-      e.preventDefault();
-      markRemembered();
-    } else if (e.code === 'KeyF') {
-      e.preventDefault();
-      markForgot();
+      revealNext();
     }
   }
 }
@@ -89,16 +110,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col bg-neko-bg dark:bg-gray-900">
+  <div class="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
-    <header class="p-4 border-b border-neko-border bg-neko-card dark:bg-gray-800 dark:border-gray-700">
+    <header class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       <div class="flex items-center justify-between">
-        <button @click="endReview" class="btn-ghost dark:text-gray-300 dark:hover:bg-gray-700">
+        <button @click="endReview" class="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400 transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <div class="text-sm text-neko-muted dark:text-gray-400">
+        <div class="text-sm text-gray-500 dark:text-gray-400">
           {{ progress.current }} / {{ progress.total }}
         </div>
         <div class="w-8" />
@@ -106,7 +127,7 @@ onUnmounted(() => {
       <!-- Progress bar -->
       <div class="mt-3 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
-          class="h-full bg-primary-500 transition-all duration-300"
+          class="h-full bg-orange-500 transition-all duration-300"
           :style="{ width: `${progress.percent}%` }"
         ></div>
       </div>
@@ -117,22 +138,22 @@ onUnmounted(() => {
       <div class="text-center">
         <div class="text-6xl mb-4">🎉</div>
         <h2 class="text-2xl font-bold mb-2 dark:text-white">Review Complete!</h2>
-        <p class="text-neko-muted dark:text-gray-400 mb-6">
+        <p class="text-gray-500 dark:text-gray-400 mb-6">
           Great job! You've reviewed all your cards for now.
         </p>
-        <div class="card p-6 max-w-sm mx-auto mb-6 dark:bg-gray-800 dark:border-gray-700">
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 max-w-sm mx-auto mb-6">
           <div class="grid grid-cols-2 gap-4 text-center">
             <div>
               <div class="text-2xl font-bold text-green-500">
                 {{ reviewStore.session?.correctCount || 0 }}
               </div>
-              <div class="text-sm text-neko-muted dark:text-gray-400">Remembered</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400">Remembered</div>
             </div>
             <div>
               <div class="text-2xl font-bold text-red-500">
                 {{ reviewStore.session?.incorrectCount || 0 }}
               </div>
-              <div class="text-sm text-neko-muted dark:text-gray-400">Forgot</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400">Forgot</div>
             </div>
           </div>
         </div>
@@ -142,8 +163,8 @@ onUnmounted(() => {
           </button>
           <button
             v-if="reviewStore.session?.incorrectCount && reviewStore.session.incorrectCount > 0"
-            @click="reviewStore.startReview(deckId); showAnswer = false"
-            class="btn btn-secondary dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+            @click="reviewStore.startReview(deckId); revealedCount = 0"
+            class="btn btn-secondary"
           >
             Review Again
           </button>
@@ -156,10 +177,10 @@ onUnmounted(() => {
       <div class="text-center">
         <div class="text-6xl mb-4">📚</div>
         <h2 class="text-xl font-bold mb-2 dark:text-white">No cards to review</h2>
-        <p class="text-neko-muted dark:text-gray-400 mb-4">
+        <p class="text-gray-500 dark:text-gray-400 mb-4">
           You're all caught up! Come back later for more reviews.
         </p>
-        <button @click="endReview" class="btn btn-primary">
+        <button @click="endReview" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors">
           Back to Home
         </button>
       </div>
@@ -167,85 +188,88 @@ onUnmounted(() => {
 
     <!-- Card Review -->
     <div v-else class="flex-1 flex flex-col">
-      <!-- Card Content -->
-      <div class="flex-1 p-4 overflow-y-auto">
-        <div class="max-w-2xl mx-auto">
-          <!-- Front -->
-          <div class="bg-neko-card dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-4">
-            <div class="text-xs font-medium text-neko-muted dark:text-gray-400 mb-3 uppercase tracking-wide">
-              Question
-            </div>
-            <div
-              class="markdown-content text-lg dark:text-white"
-              v-html="renderedFront"
-            ></div>
+      <!-- Top buffer for centering -->
+      <div class="flex-shrink-0 h-32"></div>
+
+      <div class="flex-1 flex flex-col max-w-[35rem] mx-auto w-full px-4 pb-4">
+        <!-- Card Container -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-y-auto flex flex-col">
+          <!-- Card Content -->
+          <div class="overflow-y-auto px-8 py-6 flex-1">
+            <!-- Front -->
+            <div class="prose prose-sm dark:prose-invert max-w-none" v-html="renderedFront"></div>
+
+            <!-- Revealed hidden sides -->
+            <template v-for="(side, index) in renderedHiddenSides" :key="index">
+              <div class="mx-[-32px] my-4 border-t border-dashed border-gray-300 dark:border-gray-600"></div>
+              <div class="prose prose-sm dark:prose-invert max-w-none" v-html="side"></div>
+            </template>
           </div>
 
-          <!-- Back (shown after reveal) -->
+          <!-- Bottom Hint (Next Side) -->
           <div
-            v-if="showAnswer"
-            class="bg-neko-card dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+            v-if="hasMoreSides"
+            @click="revealNext"
+            class="border-t border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
           >
-            <div class="text-xs font-medium text-neko-muted dark:text-gray-400 mb-3 uppercase tracking-wide">
-              Answer
-            </div>
-            <div
-              class="markdown-content text-lg dark:text-white"
-              v-html="renderedBack"
-            ></div>
+            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Next Side</span>
+            <kbd class="inline-flex items-center justify-center min-w-[28px] h-[22px] px-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-medium text-gray-700 dark:text-gray-200">SPACE</kbd>
+          </div>
+
+          <!-- Rating Hint -->
+          <div v-else-if="isAllRevealed" class="border-t border-gray-200 dark:border-gray-700 px-6 py-3 text-center">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              Press <kbd class="inline-flex items-center justify-center min-w-[28px] h-[22px] px-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-medium text-gray-700 dark:text-gray-200">SPACE</kbd> to mark as remembered, or <kbd class="inline-flex items-center justify-center min-w-[20px] h-[22px] px-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-medium text-gray-700 dark:text-gray-200">F</kbd> as forgot.
+            </p>
           </div>
         </div>
       </div>
 
-      <!-- Shortcuts Hint -->
-      <div class="shortcuts-hint">
-        <template v-if="!showAnswer">
-          Press <kbd>SPACE</kbd> to show answer
-        </template>
-        <template v-else>
-          Press <kbd>SPACE</kbd> to mark remembered, <kbd>F</kbd> to mark forgot
-        </template>
-      </div>
+      <!-- Teleported Review Buttons to bottom of main content -->
+      <Teleport to="body">
+        <div v-if="isAllRevealed" class="review-actions-container">
+          <div class="flex gap-3 max-w-2xl mx-auto">
+            <button
+              @click="markForgot"
+              class="btn btn-secondary flex-1 inline-flex items-center justify-center"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Forgot
+            </button>
+            <button
+              @click="markRemembered"
+              class="btn btn-primary flex-1 inline-flex items-center justify-center"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Remembered
+            </button>
+          </div>
+        </div>
+      </Teleport>
     </div>
   </div>
 </template>
 
 <style scoped>
-.shortcuts-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px 16px;
-  background: rgba(0, 0, 0, 0.03);
+.review-actions-container {
+  position: fixed;
+  left: 240px;
+  right: 0;
+  bottom: 0;
+  background: #faf9f7;
   border-top: 1px solid #e5e5e5;
-  color: #6b6b6b;
-  font-size: 13px;
+  padding: 9px 12px;
 }
 
-.dark .shortcuts-hint {
-  background: rgba(255, 255, 255, 0.03);
-  border-top-color: #374151;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 60px;
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  color: inherit;
-}
-
-.dark kbd {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
+.dark .review-actions-container {
+  background: #111827;
+  border-color: #374151;
 }
 </style>

@@ -19,6 +19,12 @@ export interface Card {
   lastModified: number;
 }
 
+// Helper to split back content into hidden sides
+export function parseHiddenSides(back: string): string[] {
+  if (!back.trim()) return [];
+  return back.split(/\n---\n/).filter(side => side.trim());
+}
+
 export const useCardStore = defineStore('card', () => {
   const cards = ref<Map<string, Card>>(new Map());
   const isLoading = ref(false);

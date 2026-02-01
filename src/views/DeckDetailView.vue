@@ -5,6 +5,7 @@ import { useDeckStore } from '@/stores/deck';
 import { useCardStore } from '@/stores/card';
 import { useReviewStore } from '@/stores/review';
 import CardModal from '@/components/CardModal.vue';
+import CardDisplay from '@/components/CardDisplay.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -31,7 +32,6 @@ const showAddCardModal = ref(false);
 const showEditCardModal = ref(false);
 const editingCardId = ref<string | null>(null);
 const viewingCard = ref<typeof cards.value[0] | null>(null);
-const expandedCards = ref<Set<string>>(new Set());
 const showActionsMenu = ref<string | null>(null);
 const dropdownPosition = ref({ top: 0, left: 0 });
 const dropdownRef = ref<HTMLElement | null>(null);
@@ -64,19 +64,8 @@ async function cramDeck() {
   router.push(`/review?deck=${encodeURIComponent(deckPath.value)}`);
 }
 
-function toggleExpand(cardId: string) {
-  const newExpanded = new Set(expandedCards.value);
-  if (newExpanded.has(cardId)) {
-    newExpanded.delete(cardId);
-  } else {
-    newExpanded.add(cardId);
-  }
-  expandedCards.value = newExpanded;
-}
-
 function viewCard(card: typeof cards.value[0]) {
   viewingCard.value = card;
-  expandedCards.value.delete(card.id);
 }
 
 function closeViewCard() {
@@ -99,7 +88,6 @@ async function deleteCard(cardId: string) {
   if (confirm('Are you sure you want to delete this card?')) {
     await cardStore.deleteCard(cardId);
     viewingCard.value = null;
-    expandedCards.value.delete(cardId);
   }
 }
 
@@ -238,26 +226,14 @@ onUnmounted(() => {
           v-for="card in filteredCards"
           :key="card.id"
           :data-card-id="card.id"
-          class="relative bg-white dark:bg-gray-800 border border-gray-200 h-fit
+          class="relative bg-white dark:bg-gray-800 border border-gray-200
           dark:border-gray-700 rounded-xl overflow-hidden transition-all hover:shadow-lg"
         >
-          <div class="p-3 cursor-pointer" @click="toggleExpand(card.id)">
-            <!-- Front side always visible -->
-            <div class="prose prose-sm dark:prose-invert max-w-none" v-html="cardStore.renderMarkdown(card.front)"></div>
-
-            <!-- Hidden indicator -->
-            <div v-if="!expandedCards.has(card.id)" class="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-orange-500">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-              1 hidden side
-            </div>
-
-            <!-- Back side -->
-            <div v-if="expandedCards.has(card.id)" class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 prose prose-sm dark:prose-invert max-w-none">
-              <div v-html="cardStore.renderMarkdown(card.back)"></div>
-            </div>
-          </div>
+          <CardDisplay
+            :cardId="card.id"
+            mode="browse"
+            @click="viewCard(card)"
+          />
 
           <!-- Actions menu button -->
           <div class="absolute top-2 right-2">
