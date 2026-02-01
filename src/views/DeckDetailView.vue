@@ -33,6 +33,9 @@ const showEditCardModal = ref(false);
 const editingCardId = ref<string | null>(null);
 const viewingCard = ref<typeof cards.value[0] | null>(null);
 const showActionsMenu = ref<string | null>(null);
+const showCardActionsMenu = ref(false);
+const cardActionsPosition = ref({ top: 0, left: 0 });
+const cardActionsRef = ref<HTMLElement | null>(null);
 const dropdownPosition = ref({ top: 0, left: 0 });
 const dropdownRef = ref<HTMLElement | null>(null);
 
@@ -70,6 +73,22 @@ function viewCard(card: typeof cards.value[0]) {
 
 function closeViewCard() {
   viewingCard.value = null;
+  showCardActionsMenu.value = false;
+}
+
+function toggleCardActionsMenu(e: MouseEvent) {
+  e.stopPropagation();
+  if (showCardActionsMenu.value) {
+    showCardActionsMenu.value = false;
+    return;
+  }
+  const button = e.currentTarget as HTMLElement;
+  const rect = button.getBoundingClientRect();
+  showCardActionsMenu.value = true;
+  cardActionsPosition.value = {
+    top: rect.bottom + 8,
+    left: rect.right - 140
+  };
 }
 
 function editCard(cardId: string) {
@@ -131,6 +150,9 @@ function handleClickOutside(e: MouseEvent) {
     if (!target.closest(`[data-card-id="${showActionsMenu.value}"]`)) {
       showActionsMenu.value = null;
     }
+  }
+  if (showCardActionsMenu.value && cardActionsRef.value && !cardActionsRef.value.contains(e.target as Node)) {
+    showCardActionsMenu.value = false;
   }
 }
 
@@ -317,29 +339,85 @@ onUnmounted(() => {
     <Teleport to="body">
       <div v-if="viewingCard" class="fixed inset-0 z-[200] flex items-center justify-center p-4" @click="closeViewCard">
         <div class="fixed inset-0 bg-black/50" @click="closeViewCard"></div>
-        <div class="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-h-[90vh] overflow-hidden">
-          <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Card Details</h2>
-            <button @click="closeViewCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-              <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        <div class="relative w-full max-w-[35rem] bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" @click.stop>
+          <!-- Top Actions -->
+          <div class="flex items-center justify-end p-2">
+            <div class="relative">
+              <button
+                @click="toggleCardActionsMenu"
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01" />
+                </svg>
+              </button>
+              <!-- Actions Dropdown -->
+              <div
+                v-if="showCardActionsMenu"
+                ref="cardActionsRef"
+                class="fixed z-[210] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                :style="{ top: `${cardActionsPosition.top}px`, left: `${cardActionsPosition.left}px` }"
+                @click.stop
+              >
+                <button
+                  @click="editCard(viewingCard.id); showCardActionsMenu = false"
+                  class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Edit
+                </button>
+                <button
+                  @click="deleteCard(viewingCard.id); showCardActionsMenu = false"
+                  class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Content -->
+          <div class="flex-1 overflow-y-auto px-8 py-4">
+            <!-- Front -->
+            <div class="prose prose-sm dark:prose-invert max-w-none" v-html="cardStore.renderMarkdown(viewingCard.front)"></div>
+
+            <!-- Divider -->
+            <div class="mx-[-32px] my-4 border-t border-dashed border-gray-300 dark:border-gray-600"></div>
+
+            <!-- Back -->
+            <div class="prose prose-sm dark:prose-invert max-w-none" v-html="cardStore.renderMarkdown(viewingCard.back)"></div>
+          </div>
+
+          <!-- Bottom Info -->
+          <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-800/50">
+            <!-- Deck breadcrumb -->
+            <div class="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
               </svg>
-            </button>
-          </div>
-          <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-            <div class="mb-6">
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">FRONT</div>
-              <div class="prose dark:prose-invert max-w-none p-4 bg-gray-50 dark:bg-gray-800 rounded-lg" v-html="cardStore.renderMarkdown(viewingCard.front)"></div>
+              <span class="font-medium">{{ viewingCard.deckPath }}</span>
             </div>
-            <hr class="border-gray-200 dark:border-gray-700" />
-            <div class="mt-6">
-              <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">BACK</div>
-              <div class="prose dark:prose-invert max-w-none p-4 bg-gray-50 dark:bg-gray-800 rounded-lg" v-html="cardStore.renderMarkdown(viewingCard.back)"></div>
+
+            <!-- Review count and interval -->
+            <div class="flex items-center gap-4 text-sm">
+              <div class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{ viewingCard.reviewCount || 0 }} Reviews</span>
+              </div>
+              <div v-if="viewingCard.interval" class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{{ viewingCard.interval }} day{{ viewingCard.interval > 1 ? 's' : '' }}</span>
+              </div>
             </div>
-          </div>
-          <div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <button @click="deleteCard(viewingCard.id)" class="btn btn-ghost text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">Delete</button>
-            <button @click="editCard(viewingCard.id)" class="btn btn-primary">Edit</button>
           </div>
         </div>
       </div>
