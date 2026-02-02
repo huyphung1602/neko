@@ -79,6 +79,11 @@ html, body {
 #app {
   height: 100%;
 }
+
+body.resizing .sidebar-separator,
+body.resizing .main-content {
+  transition: none !important;
+}
 </style>
 
 <style scoped>
@@ -94,7 +99,7 @@ html, body {
 
 .sidebar-separator {
   position: fixed;
-  left: 240px;
+  left: var(--sidebar-width, 240px);
   top: 0;
   bottom: 0;
   width: 1px;
@@ -109,6 +114,6 @@ html, body {
 .main-content {
   min-height: 100vh;
   flex: 1;
-  margin-left: 240px;
+  margin-left: var(--sidebar-width, 240px);
 }
 </style>

@@ -15,7 +15,7 @@ const deckStore = useDeckStore();
 
 const expandedIds = ref<Set<string>>(new Set());
 
-const treeItems = computed(() => deckStore.deckTreeItems() as DeckTreeItem[]);
+const treeItems = computed(() => deckStore.deckTreeItems);
 
 function toggleExpand(id: string) {
   if (expandedIds.value.has(id)) {

@@ -170,7 +170,7 @@ export const useDeckStore = defineStore('deck', () => {
     loadDecks,
     getDeck,
     getDecksByParent,
-    deckTreeItems: () => buildDeckTree(),
+    deckTreeItems: computed(() => buildDeckTree()),
     createDeck,
     renameDeck,
     deleteDeck

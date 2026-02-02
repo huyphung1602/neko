@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useDeckStore } from '@/stores/deck';
-import { useCardStore } from '@/stores/card';
+import { useCardStore, parseHiddenSides } from '@/stores/card';
 import { useReviewStore } from '@/stores/review';
 import { useMetadataStore } from '@/stores/metadata';
 import CardModal from '@/components/CardModal.vue';
@@ -36,12 +36,9 @@ const showAddCardModal = ref(false);
 const showEditCardModal = ref(false);
 const editingCardId = ref<string | null>(null);
 const viewingCard = ref<typeof cards.value[0] | null>(null);
-const showActionsMenu = ref<string | null>(null);
 const showCardActionsMenu = ref(false);
 const cardActionsPosition = ref({ top: 0, left: 0 });
 const cardActionsRef = ref<HTMLElement | null>(null);
-const dropdownPosition = ref({ top: 0, left: 0 });
-const dropdownRef = ref<HTMLElement | null>(null);
 
 const filteredCards = computed(() => {
   let result = cards.value;
@@ -60,6 +57,74 @@ const filteredCards = computed(() => {
 // Get review count for a card from metadata store
 function getReviewCount(cardId: string): number {
   return metadataStore.getReviewCount(cardId);
+}
+
+// Get hidden sides for view card modal
+const viewHiddenSides = computed(() => {
+  if (!viewingCard.value) return [];
+  return parseHiddenSides(viewingCard.value.back);
+});
+
+// Get child decks for this deck
+const childDecks = computed(() => {
+  return deckStore.getDecksByParent(deckPath.value);
+});
+
+// Get count of nested decks (recursive)
+function getChildDeckCount(deckPath: string): number {
+  const children = deckStore.getDecksByParent(deckPath);
+  if (children.length === 0) return 0;
+  let count = children.length;
+  for (const child of children) {
+    count += getChildDeckCount(child.path);
+  }
+  return count;
+}
+
+// Combined items (decks first, then cards) for the grid
+const combinedItems = computed(() => {
+  const items: Array<{
+    id: string;
+    type: 'deck' | 'card';
+    path?: string;
+    name?: string;
+    cardCount?: number;
+    nestedDeckCount?: number;
+  }> = [];
+
+  // Add deck items first
+  for (const deck of childDecks.value) {
+    items.push({
+      id: deck.path,
+      type: 'deck',
+      path: deck.path,
+      name: deck.name,
+      cardCount: cardStore.getCardsByDeck(deck.path).length,
+      nestedDeckCount: getChildDeckCount(deck.path)
+    });
+  }
+
+  // Add card items
+  for (const card of filteredCards.value) {
+    items.push({
+      id: card.id,
+      type: 'card'
+    });
+  }
+
+  return items;
+});
+
+// Navigate to child deck
+function openChildDeck(path: string) {
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  router.push(`/decks/${encodeURIComponent(cleanPath)}`);
+}
+
+// Review a deck
+function reviewDeck(path: string) {
+  reviewStore.startReview(path);
+  router.push(`/review?deck=${encodeURIComponent(path)}`);
 }
 
 async function cramDeck() {
@@ -104,7 +169,6 @@ function editCard(cardId: string) {
   viewingCard.value = null;
   editingCardId.value = cardId;
   showEditCardModal.value = true;
-  showActionsMenu.value = null;
 }
 
 function closeEditCard() {
@@ -119,11 +183,6 @@ async function deleteCard(cardId: string) {
   }
 }
 
-async function addToReview(cardId: string) {
-  await cardStore.updateCard(cardId, { state: 'new', nextReviewDate: null });
-  showActionsMenu.value = null;
-}
-
 function createNewCard() {
   showAddCardModal.value = true;
 }
@@ -132,68 +191,22 @@ function handleCardSaved() {
   showAddCardModal.value = false;
 }
 
-function toggleActionsMenu(cardId: string) {
-  if (showActionsMenu.value === cardId) {
-    showActionsMenu.value = null;
-    return;
-  }
-  showActionsMenu.value = cardId;
-  updateDropdownPosition(cardId);
-}
-
-function updateDropdownPosition(cardId: string) {
-  const cardElement = document.querySelector(`[data-card-id="${cardId}"]`);
-  if (!cardElement) return;
-
-  const rect = cardElement.getBoundingClientRect();
-  // Position dropdown at top-right of the card, with some offset
-  dropdownPosition.value = {
-    top: rect.top + 8,
-    left: rect.right - 140 // 140px is roughly dropdown width
-  };
-}
-
 function handleClickOutside(e: MouseEvent) {
-  if (showActionsMenu.value && dropdownRef.value && !dropdownRef.value.contains(e.target as Node)) {
-    const target = e.target as HTMLElement;
-    if (!target.closest(`[data-card-id="${showActionsMenu.value}"]`)) {
-      showActionsMenu.value = null;
-    }
-  }
   if (showCardActionsMenu.value && cardActionsRef.value && !cardActionsRef.value.contains(e.target as Node)) {
     showCardActionsMenu.value = false;
   }
 }
 
-function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
-    showActionsMenu.value = null;
-  }
-}
-
-function handleResize() {
-  if (showActionsMenu.value) {
-    updateDropdownPosition(showActionsMenu.value);
-  }
-}
-
 onMounted(async () => {
-  window.addEventListener('resize', handleResize);
-  window.addEventListener('scroll', handleResize, true);
   // Ensure decks and metadata are loaded
   await deckStore.loadDecks();
   await metadataStore.loadMetadata();
   isLoading.value = false;
 });
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize);
-  window.removeEventListener('scroll', handleResize, true);
-});
 </script>
 
 <template>
-  <div class="h-full flex flex-col dark:bg-gray-900 dark:text-white" @click="handleClickOutside" @keydown="handleKeydown">
+  <div class="h-full flex flex-col dark:bg-gray-900 dark:text-white" @click="handleClickOutside">
     <!-- Loading state -->
     <div v-if="isLoading" class="flex-1 flex items-center justify-center">
       <div class="text-center">
@@ -269,9 +282,10 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <!-- Cards Grid -->
+    <!-- Content Grid (Decks + Cards) -->
     <div class="flex-1 overflow-y-auto p-4">
-      <div v-if="filteredCards.length === 0" class="text-center py-12">
+      <!-- Empty state when no decks and no cards -->
+      <div v-if="combinedItems.length === 0" class="text-center py-12">
         <div class="text-6xl mb-4">📝</div>
         <h2 class="text-xl font-semibold mb-2 dark:text-white">No cards yet</h2>
         <p class="text-neko-muted dark:text-gray-400 mb-4">Add your first card to this deck</p>
@@ -281,82 +295,71 @@ onUnmounted(() => {
       </div>
 
       <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
-        <div
-          v-for="card in filteredCards"
-          :key="card.id"
-          :data-card-id="card.id"
-          class="h-fit relative bg-white dark:bg-gray-800 border border-gray-200
-          dark:border-gray-700 rounded-xl overflow-hidden transition-all hover:shadow-lg"
-        >
-          <CardDisplay
-            :cardId="card.id"
-            mode="browse"
-            @click="viewCard(card)"
-          />
-
-          <!-- Actions menu button -->
-          <div class="absolute top-2 right-2">
-            <button
-              class="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-white transition-all opacity-0 hover:opacity-100"
-              :class="{ '!opacity-100 !text-gray-600 dark:!text-white': showActionsMenu === card.id }"
-              @click.stop="toggleActionsMenu(card.id)"
-            >
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </button>
+        <!-- Deck Cards (first) -->
+        <template v-for="item in combinedItems" :key="item.id">
+          <!-- Deck Card -->
+          <div
+            v-if="item.type === 'deck'"
+            @click="openChildDeck(item.path!)"
+            class="h-fit relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden cursor-pointer hover:border-orange-500 dark:hover:border-orange-500 transition-all hover:shadow-lg"
+          >
+            <div class="p-4">
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  <span class="font-semibold dark:text-white">{{ item.name }}</span>
+                </div>
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+              <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <span class="flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  {{ item.cardCount }} cards
+                </span>
+                <span v-if="(item.nestedDeckCount ?? 0) > 0" class="flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  {{ item.nestedDeckCount }} decks
+                </span>
+              </div>
+            </div>
+            <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-600 flex items-center justify-between">
+              <span class="text-xs text-gray-400 dark:text-gray-500">Deck</span>
+              <button
+                @click.stop="reviewDeck(item.path!)"
+                class="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 dark:text-orange-400 font-medium"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Review
+              </button>
+            </div>
           </div>
-        </div>
+
+          <!-- Regular Card -->
+          <div
+            v-else
+            :data-card-id="item.id"
+            class="h-fit relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all hover:shadow-lg"
+          >
+            <CardDisplay
+              :cardId="item.id"
+              mode="browse"
+              @click="viewCard(cardStore.getCard(item.id)!)"
+            />
+          </div>
+        </template>
       </div>
     </div>
-
-    <!-- Teleported Actions Dropdown -->
-    <Teleport to="body">
-      <div
-        v-if="showActionsMenu"
-        ref="dropdownRef"
-        class="fixed z-[150] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden pointer-events-auto"
-        :style="{ top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px` }"
-      >
-        <button
-          @click="viewCard(cards.find(c => c.id === showActionsMenu)!); showActionsMenu = null"
-          class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-          View
-        </button>
-        <button
-          @click="editCard(showActionsMenu); showActionsMenu = null"
-          class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-          Edit
-        </button>
-        <button
-          @click="addToReview(showActionsMenu)"
-          class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Add to Review
-        </button>
-        <button
-          @click="deleteCard(showActionsMenu); showActionsMenu = null"
-          class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          Delete
-        </button>
-      </div>
-    </Teleport>
 
     <!-- Add Card Modal -->
     <CardModal
@@ -423,11 +426,11 @@ onUnmounted(() => {
             <!-- Front -->
             <div class="prose prose-sm dark:prose-invert max-w-none" v-html="cardStore.renderMarkdown(viewingCard.front)"></div>
 
-            <!-- Divider -->
-            <div class="mx-[-32px] my-4 border-t border-dashed border-gray-300 dark:border-gray-600"></div>
-
-            <!-- Back -->
-            <div class="prose prose-sm dark:prose-invert max-w-none" v-html="cardStore.renderMarkdown(viewingCard.back)"></div>
+            <!-- Hidden sides (using same separator pattern as review) -->
+            <template v-for="(side, index) in viewHiddenSides" :key="index">
+              <div class="mx-[-32px] my-4 border-t border-dashed border-gray-300 dark:border-gray-600"></div>
+              <div class="prose prose-sm dark:prose-invert max-w-none" v-html="cardStore.renderMarkdown(side)"></div>
+            </template>
           </div>
 
           <!-- Bottom Info -->

@@ -13,8 +13,6 @@ const router = useRouter();
 const showCreateModal = ref(false);
 const newDeckName = ref('');
 const selectedParentPath = ref<string | null>(null);
-const editingDeckPath = ref<string | null>(null);
-const editDeckName = ref('');
 
 async function createDeck() {
   if (!newDeckName.value.trim()) return;
@@ -30,27 +28,6 @@ async function createDeck() {
     const cleanPath = deck.path.startsWith('/') ? deck.path.slice(1) : deck.path;
     router.push(`/decks/${encodeURIComponent(cleanPath)}`);
   }
-}
-
-function startEditDeck(deckPath: string, currentName: string, event: Event) {
-  event.stopPropagation();
-  editingDeckPath.value = deckPath;
-  editDeckName.value = currentName;
-}
-
-async function saveDeckName() {
-  if (editingDeckPath.value && editDeckName.value.trim()) {
-    await deckStore.renameDeck(editingDeckPath.value, editDeckName.value.trim());
-  }
-  editingDeckPath.value = null;
-  editDeckName.value = '';
-  // Reload decks without full page refresh
-  await deckStore.loadDecks();
-}
-
-function cancelEdit() {
-  editingDeckPath.value = null;
-  editDeckName.value = '';
 }
 
 function openDeck(deckPath: string) {
@@ -101,59 +78,17 @@ async function deleteDeck(deckPath: string, event: Event) {
           @click="openDeck(deck.path)"
         >
           <div class="flex items-start justify-between mb-2">
-            <div class="flex-1">
-              <h3 v-if="editingDeckPath !== deck.path" class="font-semibold text-lg dark:text-white">{{ deck.name }}</h3>
-              <input
-                v-else
-                v-model="editDeckName"
-                class="w-full px-2 py-1 text-lg font-semibold border border-primary-500 rounded dark:bg-gray-700 dark:text-white dark:border-primary-400"
-                @keyup.enter="saveDeckName"
-                @keyup.escape="cancelEdit"
-                @click.stop
-              />
-            </div>
-            <div class="flex items-center gap-1">
-              <button
-                v-if="editingDeckPath !== deck.path"
-                @click="startEditDeck(deck.path, deck.name, $event)"
-                class="text-neko-muted dark:text-gray-400 hover:text-primary-500 p-1"
-                title="Edit name"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-              </button>
-              <button
-                v-if="editingDeckPath === deck.path"
-                @click="saveDeckName"
-                class="text-green-500 hover:text-green-600 p-1"
-                title="Save"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </button>
-              <button
-                v-if="editingDeckPath === deck.path"
-                @click="cancelEdit"
-                class="text-gray-400 hover:text-gray-500 p-1"
-                title="Cancel"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              <button
-                @click.stop="deleteDeck(deck.path, $event)"
-                class="text-neko-muted dark:text-gray-400 hover:text-red-500 p-1"
-                title="Delete deck"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
+            <h3 class="font-semibold text-lg dark:text-white">{{ deck.name }}</h3>
+            <button
+              @click.stop="deleteDeck(deck.path, $event)"
+              class="text-neko-muted dark:text-gray-400 hover:text-red-500 p-1"
+              title="Delete deck"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
           </div>
 
           <div class="text-sm text-neko-muted dark:text-gray-400 mb-2">
