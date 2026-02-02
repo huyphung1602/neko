@@ -185,18 +185,33 @@ ipcMain.handle('create-deck', async (_, { workspacePath, deckName, parentPath })
 });
 
 ipcMain.handle('delete-deck', async (_, deckPath) => {
-  if (fs.existsSync(deckPath)) {
-    fs.rmSync(deckPath, { recursive: true, force: true });
+  const configPath = path.join(app.getPath('userData'), 'config.json');
+  if (!fs.existsSync(configPath)) return false;
+
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  if (!config.workspacePath) return false;
+
+  const fullPath = path.join(config.workspacePath, deckPath.slice(1)); // Remove leading '/' and join
+  if (fs.existsSync(fullPath)) {
+    fs.rmSync(fullPath, { recursive: true, force: true });
   }
   return true;
 });
 
 ipcMain.handle('rename-deck', async (_, { oldPath, newName }) => {
-  const newPath = path.join(path.dirname(oldPath), newName);
-  if (fs.existsSync(oldPath)) {
-    fs.renameSync(oldPath, newPath);
+  const configPath = path.join(app.getPath('userData'), 'config.json');
+  if (!fs.existsSync(configPath)) return '';
+
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  if (!config.workspacePath) return '';
+
+  const oldFullPath = path.join(config.workspacePath, oldPath.slice(1));
+  const newFullPath = path.join(path.dirname(oldFullPath), newName);
+
+  if (fs.existsSync(oldFullPath)) {
+    fs.renameSync(oldFullPath, newFullPath);
   }
-  return newPath;
+  return newPath; // Return relative path
 });
 
 ipcMain.handle('get-card-files-in-deck', async (_, deckPath) => {

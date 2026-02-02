@@ -91,7 +91,10 @@ export const useDeckStore = defineStore('deck', () => {
           name,
           parentPath
         };
-        decks.value.set(fullPath, deck);
+        // Create new Map to trigger reactivity
+        const newDecks = new Map(decks.value);
+        newDecks.set(fullPath, deck);
+        decks.value = newDecks;
         return deck;
       }
     } catch (e) {
@@ -106,12 +109,24 @@ export const useDeckStore = defineStore('deck', () => {
         await window.nekos.deleteDeck(path);
       }
 
-      // Recursively delete child decks from memory
-      const childDecks = allDecks.value.filter(d => d.path.startsWith(path + '/'));
-      for (const child of childDecks) {
-        decks.value.delete(child.path);
+      // Get all paths to delete (deck and its children)
+      const pathsToDelete = new Set<string>();
+      pathsToDelete.add(path);
+      for (const deck of allDecks.value) {
+        if (deck.path.startsWith(path + '/')) {
+          pathsToDelete.add(deck.path);
+        }
       }
-      decks.value.delete(path);
+
+      // Create new Map without deleted decks (triggers reactivity)
+      const newDecks = new Map<string, Deck>();
+      for (const [key, value] of decks.value) {
+        if (!pathsToDelete.has(key)) {
+          newDecks.set(key, value);
+        }
+      }
+      decks.value = newDecks;
+
       console.log('[DeckStore] Deleted deck:', path);
     } catch (e) {
       console.error('Failed to delete deck:', e);
@@ -128,12 +143,17 @@ export const useDeckStore = defineStore('deck', () => {
 
         // Update in memory
         const newPath = path.substring(0, path.lastIndexOf('/')) + '/' + newName;
+
+        // Create new Map to trigger reactivity
+        const newDecks = new Map(decks.value);
+        newDecks.delete(path);
+
         deck.name = newName;
         deck.path = newPath;
         deck.id = newPath;
+        newDecks.set(newPath, deck);
 
-        decks.value.delete(path);
-        decks.value.set(newPath, deck);
+        decks.value = newDecks;
 
         return true;
       }

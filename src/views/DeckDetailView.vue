@@ -15,6 +15,8 @@ const cardStore = useCardStore();
 const reviewStore = useReviewStore();
 const metadataStore = useMetadataStore();
 
+const isLoading = ref(true);
+
 const deckPath = computed(() => {
   const id = route.params.id as string;
   return id.startsWith('/') ? decodeURIComponent(id) : '/' + decodeURIComponent(id);
@@ -178,8 +180,10 @@ function handleResize() {
 onMounted(async () => {
   window.addEventListener('resize', handleResize);
   window.addEventListener('scroll', handleResize, true);
-  // Ensure metadata is loaded
+  // Ensure decks and metadata are loaded
+  await deckStore.loadDecks();
   await metadataStore.loadMetadata();
+  isLoading.value = false;
 });
 
 onUnmounted(() => {
@@ -190,6 +194,30 @@ onUnmounted(() => {
 
 <template>
   <div class="h-full flex flex-col dark:bg-gray-900 dark:text-white" @click="handleClickOutside" @keydown="handleKeydown">
+    <!-- Loading state -->
+    <div v-if="isLoading" class="flex-1 flex items-center justify-center">
+      <div class="text-center">
+        <div class="text-4xl mb-4">🐱</div>
+        <p class="text-gray-500 dark:text-gray-400">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Deck not found state -->
+    <div v-else-if="!deck" class="flex-1 flex items-center justify-center p-6">
+      <div class="text-center">
+        <div class="text-6xl mb-4">📁</div>
+        <h2 class="text-xl font-bold mb-2 dark:text-white">Deck Not Found</h2>
+        <p class="text-gray-500 dark:text-gray-400 mb-4">
+          The deck "{{ deckPath }}" could not be found.
+        </p>
+        <button @click="router.push('/decks')" class="btn btn-primary">
+          Back to Decks
+        </button>
+      </div>
+    </div>
+
+    <!-- Deck content -->
+    <template v-else>
     <header class="p-4 border-b border-neko-border dark:border-gray-700">
       <div class="flex items-center justify-between gap-4">
         <div>
@@ -425,6 +453,7 @@ onUnmounted(() => {
         </div>
       </div>
     </Teleport>
+    </template>
   </div>
 </template>
 

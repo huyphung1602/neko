@@ -205,7 +205,8 @@ function toggleDarkMode() {
 async function changeWorkspace() {
   await workspaceStore.selectWorkspace();
   if (workspaceStore.workspacePath) {
-    router.go(0);
+    // Navigate to home without full page refresh
+    router.push('/');
   }
 }
 
@@ -225,8 +226,9 @@ function openCardModal() {
   showCardModal.value = true;
 }
 
-function handleCardSaved() {
-  router.go(0);
+async function handleCardSaved() {
+  // Reload cards without full page refresh
+  await cardStore.loadCards();
 }
 
 function openCreateDeckModal() {
@@ -237,10 +239,16 @@ function openCreateDeckModal() {
 async function createDeck() {
   if (!newDeckName.value.trim() || !workspaceStore.workspacePath) return;
 
-  await deckStore.createDeck(newDeckName.value.trim());
+  const deck = await deckStore.createDeck(newDeckName.value.trim());
   newDeckName.value = '';
   showCreateDeckModal.value = false;
-  router.go(0);
+  // Reload decks without full page refresh
+  await deckStore.loadDecks();
+  // Navigate to the new deck
+  if (deck) {
+    const cleanPath = deck.path.startsWith('/') ? deck.path.slice(1) : deck.path;
+    router.push(`/decks/${encodeURIComponent(cleanPath)}`);
+  }
 }
 </script>
 

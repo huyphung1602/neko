@@ -16,14 +16,20 @@ const selectedParentPath = ref<string | null>(null);
 const editingDeckPath = ref<string | null>(null);
 const editDeckName = ref('');
 
-function createDeck() {
+async function createDeck() {
   if (!newDeckName.value.trim()) return;
 
-  deckStore.createDeck(newDeckName.value.trim(), selectedParentPath.value || undefined);
+  const deck = await deckStore.createDeck(newDeckName.value.trim(), selectedParentPath.value || undefined);
   newDeckName.value = '';
   selectedParentPath.value = null;
   showCreateModal.value = false;
-  router.go(0);
+  // Reload decks without full page refresh
+  await deckStore.loadDecks();
+  // Navigate to the new deck if created
+  if (deck) {
+    const cleanPath = deck.path.startsWith('/') ? deck.path.slice(1) : deck.path;
+    router.push(`/decks/${encodeURIComponent(cleanPath)}`);
+  }
 }
 
 function startEditDeck(deckPath: string, currentName: string, event: Event) {
@@ -32,13 +38,14 @@ function startEditDeck(deckPath: string, currentName: string, event: Event) {
   editDeckName.value = currentName;
 }
 
-function saveDeckName() {
+async function saveDeckName() {
   if (editingDeckPath.value && editDeckName.value.trim()) {
-    deckStore.renameDeck(editingDeckPath.value, editDeckName.value.trim());
+    await deckStore.renameDeck(editingDeckPath.value, editDeckName.value.trim());
   }
   editingDeckPath.value = null;
   editDeckName.value = '';
-  router.go(0);
+  // Reload decks without full page refresh
+  await deckStore.loadDecks();
 }
 
 function cancelEdit() {
@@ -55,7 +62,8 @@ async function deleteDeck(deckPath: string, event: Event) {
   event.stopPropagation();
   if (confirm('Are you sure you want to delete this deck and all its cards?')) {
     await deckStore.deleteDeck(deckPath);
-    router.go(0);
+    // Reload decks without full page refresh
+    await deckStore.loadDecks();
   }
 }
 </script>
