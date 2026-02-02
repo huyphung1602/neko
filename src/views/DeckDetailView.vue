@@ -421,17 +421,13 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Card Content -->
-          <div class="flex-1 overflow-y-auto px-8 py-4">
-            <!-- Front -->
-            <div class="prose prose-sm dark:prose-invert max-w-none" v-html="cardStore.renderMarkdown(viewingCard.front)"></div>
-
-            <!-- Hidden sides (using same separator pattern as review) -->
-            <template v-for="(side, index) in viewHiddenSides" :key="index">
-              <div class="mx-[-32px] my-4 border-t border-dashed border-gray-300 dark:border-gray-600"></div>
-              <div class="prose prose-sm dark:prose-invert max-w-none" v-html="cardStore.renderMarkdown(side)"></div>
-            </template>
-          </div>
+          <!-- Card Content - use CardDisplay to show all sides -->
+          <CardDisplay
+            :cardId="viewingCard.id"
+            mode="review"
+            :initialRevealed="viewHiddenSides.length"
+            :canCollapse="false"
+          />
 
           <!-- Bottom Info -->
           <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-800/50">

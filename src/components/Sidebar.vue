@@ -1,15 +1,11 @@
 <template>
   <aside
-    class="h-screen bg-[#faf9f7] dark:bg-[#1a1a2e] text-[#1a1a2e] dark:text-white flex flex-col fixed left-0 top-0 z-100 select-none"
-    :style="{ width: `${sidebarWidth}px` }"
-    @mousemove="handleMouseMove"
-    @mouseup="handleMouseUp"
-    @mouseleave="handleMouseUp"
+    class="h-screen bg-[#faf9f7] dark:bg-[#1a1a2e] text-[#1a1a2e] dark:text-white flex flex-col fixed left-0 top-0 z-100 select-none sidebar"
   >
     <!-- Resize handle -->
     <div
-      class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-orange-500 transition-colors"
-      @mousedown="handleMouseDown"
+      class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-orange-500 transition-colors resize-handle"
+      @mousedown="startResize"
     ></div>
 
     <!-- Main Navigation -->
@@ -139,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDeckStore } from '@/stores/deck';
 import { useCardStore } from '@/stores/card';
@@ -158,10 +154,10 @@ const showCardModal = ref(false);
 const showCreateDeckModal = ref(false);
 const newDeckName = ref('');
 const selectedParentPath = ref<string | undefined>(undefined);
-const isResizing = ref(false);
 const sidebarWidth = ref(240);
-const startX = ref(0);
-const startWidth = ref(0);
+let isResizing = false;
+let startX = 0;
+let startWidth = 0;
 
 const deckTree = computed(() => deckStore.deckTreeItems);
 const isDark = computed(() => document.documentElement.classList.contains('dark'));
@@ -204,9 +200,7 @@ async function createDeck() {
   newDeckName.value = '';
   selectedParentPath.value = undefined;
   showCreateDeckModal.value = false;
-  // Reload decks without full page refresh
   await deckStore.loadDecks();
-  // Navigate to the new deck
   if (deck) {
     const cleanPath = deck.path.startsWith('/') ? deck.path.slice(1) : deck.path;
     router.push(`/decks/${encodeURIComponent(cleanPath)}`);
@@ -229,37 +223,53 @@ function toggleDarkMode() {
   localStorage.setItem('darkMode', document.documentElement.classList.contains('dark') ? 'true' : 'false');
 }
 
-function handleMouseDown(e: MouseEvent) {
-  isResizing.value = true;
-  startX.value = e.clientX;
-  startWidth.value = sidebarWidth.value;
+function startResize(e: MouseEvent) {
+  isResizing = true;
+  startX = e.clientX;
+  startWidth = sidebarWidth.value;
   document.body.style.cursor = 'col-resize';
-  document.body.style.userSelect = 'none';
   document.body.classList.add('resizing');
+  document.documentElement.classList.add('resizing-sidebar');
 }
 
-function handleMouseMove(e: MouseEvent) {
-  if (!isResizing.value) return;
-  requestAnimationFrame(() => {
-    const diff = e.clientX - startX.value;
-    const newWidth = startWidth.value + diff;
-    const clampedWidth = Math.max(160, Math.min(800, newWidth));
-    sidebarWidth.value = clampedWidth;
-    document.documentElement.style.setProperty('--sidebar-width', `${clampedWidth}px`);
-  });
+function onMouseMove(e: MouseEvent) {
+  if (!isResizing) return;
+  const diff = e.clientX - startX;
+  const newWidth = startWidth + diff;
+  const clampedWidth = Math.max(160, Math.min(480, newWidth));
+  sidebarWidth.value = clampedWidth;
+  document.documentElement.style.setProperty('--sidebar-width', `${clampedWidth}px`);
 }
 
-function handleMouseUp() {
-  if (isResizing.value) {
-    isResizing.value = false;
+function stopResize() {
+  if (isResizing) {
+    isResizing = false;
     document.body.style.cursor = '';
-    document.body.style.userSelect = '';
     document.body.classList.remove('resizing');
+    document.documentElement.classList.remove('resizing-sidebar');
   }
 }
+
+onMounted(() => {
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', stopResize);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup', stopResize);
+});
 </script>
 
 <style scoped>
+.sidebar {
+  width: var(--sidebar-width, 240px);
+}
+
+.resize-handle {
+  touch-action: none;
+}
+
 .nav-item {
   @apply flex items-center gap-1.5 px-2 py-1.5 border-none bg-none w-full text-left cursor-pointer rounded transition-all duration-150 text-sm text-gray-600 dark:text-gray-300;
 }

@@ -15,6 +15,8 @@
 
     <!-- Hidden sides (revealed one at a time) - review mode only -->
     <template v-for="(_, index) in revealedSides" :key="index">
+      <!-- Full-width separator -->
+      <div class="border-t border-dashed border-gray-300 dark:border-gray-600 mx-[-32px]"></div>
       <div class="card-content hidden-content">
         <div class="markdown-content dark:text-white" v-html="renderedHiddenSides[index]"></div>
       </div>
@@ -44,14 +46,6 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
         </svg>
         <span>Collapse</span>
-      </div>
-
-      <!-- All sides revealed -->
-      <div v-else-if="hiddenSidesCount > 0" class="all-revealed">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-        </svg>
-        <span>All sides revealed</span>
       </div>
     </div>
   </div>
@@ -121,12 +115,6 @@ watch(() => props.cardId, () => {
 
 .hidden-content {
   padding-top: 16px;
-  margin-top: 16px;
-  border-top: 1px dashed #e5e5e5;
-}
-
-.dark .hidden-content {
-  border-top-color: #374151;
 }
 
 .hidden-count {

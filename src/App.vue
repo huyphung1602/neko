@@ -80,8 +80,14 @@ html, body {
   height: 100%;
 }
 
+html {
+  --sidebar-width: 240px;
+}
+
 body.resizing .sidebar-separator,
-body.resizing .main-content {
+body.resizing .main-content,
+html.resizing-sidebar .sidebar-separator,
+html.resizing-sidebar .main-content {
   transition: none !important;
 }
 </style>
@@ -99,7 +105,7 @@ body.resizing .main-content {
 
 .sidebar-separator {
   position: fixed;
-  left: var(--sidebar-width, 240px);
+  left: var(--sidebar-width);
   top: 0;
   bottom: 0;
   width: 1px;
@@ -114,6 +120,6 @@ body.resizing .main-content {
 .main-content {
   min-height: 100vh;
   flex: 1;
-  margin-left: var(--sidebar-width, 240px);
+  margin-left: var(--sidebar-width);
 }
 </style>

@@ -306,7 +306,7 @@ function parseCardContent(fileName, deckPath, filePath, content) {
 
   const parts = body.split(/\r?\n---\r?\n/);
   const front = parts[0]?.trim() || '';
-  const back = parts[1]?.trim() || '';
+  const back = parts.slice(1).join('\n---\n') || '';
 
   return {
     id: frontmatter.id,
