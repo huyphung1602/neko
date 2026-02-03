@@ -16,7 +16,7 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.cjs')
     },
-    titleBarStyle: 'default',
+    titleBarStyle: 'hiddenInset',
     backgroundColor: '#faf9f7',
     show: false
   });

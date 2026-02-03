@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="h-screen bg-[#faf9f7] dark:bg-[#1a1a2e] text-[#1a1a2e] dark:text-white flex flex-col fixed left-0 top-0 z-100 select-none sidebar"
+    class="bg-neko-bg dark:bg-gray-900 text-neko-text dark:text-gray-100 flex flex-col fixed left-0 top-52px z-100 select-none sidebar"
   >
     <!-- Resize handle -->
     <div
@@ -263,7 +263,8 @@ onUnmounted(() => {
 
 <style scoped>
 .sidebar {
-  width: var(--sidebar-width, 240px);
+  width: var(--sidebar-width);
+  height: calc(100vh - 52px);
 }
 
 .resize-handle {

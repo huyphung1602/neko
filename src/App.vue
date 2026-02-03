@@ -30,6 +30,9 @@ onMounted(async () => {
 </script>
 
 <template>
+  <!-- Custom Title Bar (macOS) -->
+  <div class="title-bar"></div>
+
   <!-- Loading state -->
   <div v-if="!workspaceStore.isInitialized" class="h-screen flex items-center justify-center bg-neko-bg dark:bg-gray-900">
     <div class="text-center">
@@ -93,10 +96,26 @@ html.resizing-sidebar .main-content {
 </style>
 
 <style scoped>
+.title-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: #faf9f7;
+  z-index: 9999;
+  -webkit-app-region: drag;
+}
+
+.dark .title-bar {
+  background: #111827;
+}
+
 .app-layout {
   min-height: 100vh;
   background: #faf9f7;
   display: flex;
+  padding-top: 52px;
 }
 
 .dark .app-layout {
@@ -106,7 +125,7 @@ html.resizing-sidebar .main-content {
 .sidebar-separator {
   position: fixed;
   left: var(--sidebar-width);
-  top: 0;
+  top: 52px;
   bottom: 0;
   width: 1px;
   background: #e5e5e5;
@@ -114,12 +133,17 @@ html.resizing-sidebar .main-content {
 }
 
 .dark .sidebar-separator {
-  background: #111827;
+  background: #374151;
 }
 
 .main-content {
-  min-height: 100vh;
+  min-height: calc(100vh - 52px);
   flex: 1;
   margin-left: var(--sidebar-width);
+}
+
+/* Make sidebar nav items draggable except for interactive elements */
+:deep(.nav-item) {
+  -webkit-app-region: no-drag;
 }
 </style>
